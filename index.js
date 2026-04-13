@@ -305,6 +305,74 @@ app.post('/exec', function(req, res) {
   });
 });
 
+app.post('/chat', function(req, res) {
+  var messages = req.body.messages;
+  var system = req.body.system || '';
+  var model = req.body.model || 'claude-sonnet-4-20250514';
+  var terminalOutput = req.body.terminal_output;
+
+  // Terminal ciktisi analizi modu
+  if (terminalOutput) {
+    system = 'Kullanici sunucuda bir komut calistirdi. Terminal ciktisini analiz et, Turkce acikla, onemli noktalari vurgula, varsa hata veya uyarilari belirt. Kisa ve net cevap ver.';
+    if (!messages || !messages.length) {
+      messages = [{ role: 'user', content: 'Komut ciktisi:\n```\n' + terminalOutput + '\n```' }];
+    }
+  }
+
+  if (!messages || !messages.length) return res.status(400).json({ error: 'messages gerekli' });
+
+  var apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY ayarlanmamis' });
+
+  var https = require('https');
+  var payload = JSON.stringify({
+    model: model,
+    max_tokens: 4096,
+    system: system,
+    messages: messages
+  });
+
+  var options = {
+    hostname: 'api.anthropic.com',
+    path: '/v1/messages',
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'Content-Length': Buffer.byteLength(payload)
+    }
+  };
+
+  var apiReq = https.request(options, function(apiRes) {
+    var body = '';
+    apiRes.on('data', function(c) { body += c; });
+    apiRes.on('end', function() {
+      try {
+        var data = JSON.parse(body);
+        if (data.error) {
+          return res.status(apiRes.statusCode || 500).json({ error: data.error.message || 'API hatasi', type: data.error.type });
+        }
+        res.json(data);
+      } catch(e) {
+        res.status(500).json({ error: 'API yaniti parse edilemedi', detail: body.substring(0, 300) });
+      }
+    });
+  });
+
+  apiReq.on('error', function(e) {
+    res.status(500).json({ error: 'Anthropic API baglanti hatasi', detail: e.message });
+  });
+
+  apiReq.setTimeout(60000, function() {
+    apiReq.destroy();
+    res.status(504).json({ error: 'API timeout (60s)' });
+  });
+
+  apiReq.write(payload);
+  apiReq.end();
+});
+
 app.listen(3002, function() {
   console.log('Muzik calisiyor: 3002');
 });
