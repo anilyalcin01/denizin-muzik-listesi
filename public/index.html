@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deniz'in Müzik Listesi</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0e1a; color: white; font-family: Arial, sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+.container { background: #111827; padding: 40px; border-radius: 16px; width: 90%; max-width: 500px; text-align: center; }
+h1 { font-size: 2em; margin-bottom: 8px; }
+h1 span { color: #38bdf8; }
+p { color: #94a3b8; margin-bottom: 24px; }
+.tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+.tab { flex: 1; padding: 10px; border: 1px solid #334155; border-radius: 8px; background: #1e293b; color: #94a3b8; cursor: pointer; font-size: 0.95em; font-weight: bold; transition: all 0.2s; }
+.tab.active-yt { background: #dc2626; color: white; border-color: #dc2626; }
+.tab.active-sp { background: #1db954; color: white; border-color: #1db954; }
+input { width: 100%; padding: 12px; background: #1e293b; border: 1px solid #334155; border-radius: 8px; color: white; font-size: 1em; margin-bottom: 12px; }
+select { width: 48%; padding: 12px; background: #1e293b; border: 1px solid #334155; border-radius: 8px; color: white; font-size: 1em; margin-bottom: 16px; }
+.selects { display: flex; gap: 4%; }
+button { width: 100%; padding: 14px; background: #ef4444; border: none; border-radius: 8px; color: white; font-size: 1em; cursor: pointer; font-weight: bold; transition: background 0.2s; }
+button.sp-mode { background: #1db954; }
+button:disabled { background: #6b7280 !important; cursor: not-allowed; }
+#status { margin-top: 16px; padding: 12px; border-radius: 8px; display: none; }
+.success { background: #064e3b; color: #6ee7b7; }
+.error { background: #450a0a; color: #fca5a5; }
+.loading { background: #1e3a5f; color: #93c5fd; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Deniz'in <span>Muzik Listesi</span></h1>
+  <p id="subtitle">YouTube MP3 Donusturucu</p>
+  <div class="tabs">
+    <div class="tab active-yt" id="tabYt" onclick="switchTab('yt')">YouTube</div>
+    <div class="tab" id="tabSp" onclick="switchTab('sp')">Spotify</div>
+  </div>
+  <input type="text" id="urlInput" placeholder="YouTube URL yapistir..." />
+  <div class="selects" id="selectsRow">
+    <select id="quality">
+      <option value="128">128 kbps</option>
+      <option value="192" selected>192 kbps</option>
+      <option value="320">320 kbps</option>
+    </select>
+    <select id="format">
+      <option value="mp3" selected>MP3</option>
+      <option value="ogg">OGG</option>
+      <option value="wav">WAV</option>
+    </select>
+  </div>
+  <div id="manualRow" style="display:none;margin-bottom:12px">
+    <input type="text" id="manualInput" placeholder="Sarki adi girin... (ornek: Rick Astley Never Gonna Give You Up)" style="margin-bottom:8px" />
+    <button id="manualBtn" onclick="manuelIndir()" style="background:#8b5cf6">Manuel Ara ve Indir</button>
+  </div>
+  <button id="btn" onclick="indir()">Donustur ve Indir</button>
+  <div id="status"></div>
+</div>
+<script>
+var currentTab = 'yt';
+
+function switchTab(tab) {
+  currentTab = tab;
+  var tabYt = document.getElementById('tabYt');
+  var tabSp = document.getElementById('tabSp');
+  var input = document.getElementById('urlInput');
+  var btn = document.getElementById('btn');
+  var subtitle = document.getElementById('subtitle');
+  var formatSelect = document.getElementById('format');
+
+  tabYt.className = 'tab' + (tab === 'yt' ? ' active-yt' : '');
+  tabSp.className = 'tab' + (tab === 'sp' ? ' active-sp' : '');
+
+  if (tab === 'sp') {
+    input.placeholder = 'Spotify URL yapistir...';
+    subtitle.textContent = 'Spotify MP3 Indirici';
+    btn.textContent = 'Indir';
+    btn.className = 'sp-mode';
+    formatSelect.style.display = 'none';
+  } else {
+    input.placeholder = 'YouTube URL yapistir...';
+    subtitle.textContent = 'YouTube MP3 Donusturucu';
+    btn.textContent = 'Donustur ve Indir';
+    btn.className = '';
+    formatSelect.style.display = '';
+  }
+}
+
+async function indir() {
+  var url = document.getElementById('urlInput').value.trim();
+  var quality = document.getElementById('quality').value;
+  var format = document.getElementById('format').value;
+  var btn = document.getElementById('btn');
+  if (!url) { showStatus('URL gir!', 'error'); return; }
+
+  btn.disabled = true;
+  showStatus('Indiriliyor... (1-2 dakika surebilir)', 'loading');
+
+  try {
+    var endpoint, body;
+    if (currentTab === 'sp') {
+      endpoint = '/muzik/spotify';
+      body = JSON.stringify({ url: url, quality: quality });
+    } else {
+      endpoint = '/muzik/download';
+      body = JSON.stringify({ url: url, format: format, quality: quality });
+    }
+
+    var resp = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: body
+    });
+
+    var contentType = resp.headers.get('content-type') || '';
+
+    if (!resp.ok) {
+      if (contentType.includes('application/json')) {
+        try {
+          var err = await resp.json();
+          if (err.error === 'MANUAL_SEARCH') {
+            showStatus(err.message || 'Metadata alinamadi. Sarki adini manuel girin.', 'loading');
+            document.getElementById('manualRow').style.display = 'block';
+            document.getElementById('manualInput').focus();
+            btn.disabled = false;
+            return;
+          }
+          showStatus('Hata: ' + (err.error || 'Bilinmeyen hata') + (err.detail ? ' — ' + err.detail.substring(0, 120) : ''), 'error');
+        } catch(pe) {
+          showStatus('Hata: Sunucu hatasi (HTTP ' + resp.status + ')', 'error');
+        }
+      } else {
+        showStatus('Hata: Sunucu hatasi (HTTP ' + resp.status + ')', 'error');
+      }
+      btn.disabled = false;
+      return;
+    }
+
+    // Basarili ama JSON dondu (beklenmeyen hata)
+    if (contentType.includes('application/json')) {
+      try {
+        var errData = await resp.json();
+        showStatus('Hata: ' + (errData.error || 'Bilinmeyen hata'), 'error');
+      } catch(pe) {
+        showStatus('Hata: Beklenmeyen sunucu yaniti', 'error');
+      }
+      btn.disabled = false;
+      return;
+    }
+
+    var blob = await resp.blob();
+    if (blob.size < 1000) {
+      showStatus('Hata: Dosya cok kucuk veya bos (' + blob.size + ' byte)', 'error');
+      btn.disabled = false;
+      return;
+    }
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    var cd = resp.headers.get('content-disposition') || '';
+    var match = cd.match(/filename\*?=(?:UTF-8'')?([^;]+)/);
+    a.download = match ? decodeURIComponent(match[1]) : 'muzik.mp3';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showStatus('Indirildi!', 'success');
+  } catch(e) {
+    showStatus('Baglanti hatasi: ' + e.message, 'error');
+  }
+  btn.disabled = false;
+}
+
+async function manuelIndir() {
+  var query = document.getElementById('manualInput').value.trim();
+  var btn = document.getElementById('manualBtn');
+  if (!query) { showStatus('Sarki adi girin!', 'error'); return; }
+
+  btn.disabled = true;
+  showStatus('Deezer\'da araniyor: "' + query + '"...', 'loading');
+
+  try {
+    var resp = await fetch('/muzik/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: query })
+    });
+
+    var contentType = resp.headers.get('content-type') || '';
+
+    if (!resp.ok) {
+      if (contentType.includes('application/json')) {
+        try {
+          var err = await resp.json();
+          showStatus('Hata: ' + (err.error || 'Bilinmeyen hata'), 'error');
+        } catch(pe) {
+          showStatus('Hata: Sunucu hatasi (HTTP ' + resp.status + ')', 'error');
+        }
+      } else {
+        showStatus('Hata: Sunucu hatasi (HTTP ' + resp.status + ')', 'error');
+      }
+      btn.disabled = false;
+      return;
+    }
+
+    if (contentType.includes('application/json')) {
+      try {
+        var errData = await resp.json();
+        showStatus('Hata: ' + (errData.error || 'Bilinmeyen hata'), 'error');
+      } catch(pe) {
+        showStatus('Hata: Beklenmeyen sunucu yaniti', 'error');
+      }
+      btn.disabled = false;
+      return;
+    }
+
+    var blob = await resp.blob();
+    if (blob.size < 1000) {
+      showStatus('Hata: Dosya cok kucuk veya bos (' + blob.size + ' byte)', 'error');
+      btn.disabled = false;
+      return;
+    }
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    var cd = resp.headers.get('content-disposition') || '';
+    var match = cd.match(/filename\*?=(?:UTF-8'')?([^;]+)/);
+    a.download = match ? decodeURIComponent(match[1]) : 'muzik.mp3';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    document.getElementById('manualRow').style.display = 'none';
+    document.getElementById('manualInput').value = '';
+    showStatus('Indirildi!', 'success');
+  } catch(e) {
+    showStatus('Baglanti hatasi: ' + e.message, 'error');
+  }
+  btn.disabled = false;
+}
+
+function showStatus(msg, type) {
+  var s = document.getElementById('status');
+  s.textContent = msg;
+  s.className = type;
+  s.style.display = 'block';
+}
+</script>
+</body>
+</html>

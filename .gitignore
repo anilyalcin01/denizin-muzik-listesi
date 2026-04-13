@@ -1,0 +1,9 @@
+node_modules/
+*.mp3
+*.wav
+*.ogg
+*.flac
+*.m4a
+/tmp/
+*.bak
+.cache

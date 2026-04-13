@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Komuta Merkezi</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;min-height:100vh;display:flex;flex-direction:column}
+.header{background:#fff;border-bottom:1px solid #e5e5e5;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.logo{font-size:15px;font-weight:600;color:#1a1a1a}
+.srv-badge{display:flex;align-items:center;gap:5px;font-size:11px;color:#666;background:#f5f5f5;border:1px solid #e0e0e0;padding:3px 10px;border-radius:999px;font-family:monospace}
+.srv-dot{width:6px;height:6px;border-radius:50%;background:#ccc}
+.engines-row{display:flex;gap:6px;flex-wrap:wrap}
+.eng{display:flex;align-items:center;gap:6px;font-size:12px;padding:4px 12px;border-radius:999px;border:1px solid #e0e0e0;background:#fff;color:#555;user-select:none}
+.eng.active{border-color:#5c6ac4;background:#eef;color:#3d4fc4}
+.eng-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.eng-toggle{width:28px;height:16px;border-radius:999px;border:none;cursor:pointer;padding:0;position:relative;transition:background .2s;flex-shrink:0}
+.eng-toggle.on{background:#4CAF50}
+.eng-toggle.off{background:#ccc}
+.eng-toggle::after{content:'';position:absolute;top:2px;width:12px;height:12px;border-radius:50%;background:#fff;transition:left .2s}
+.eng-toggle.on::after{left:14px}
+.eng-toggle.off::after{left:2px}
+.main{flex:1;display:flex;flex-direction:column;background:#fff}
+.chat-feed{overflow-y:auto;padding:20px 16px;display:flex;flex-direction:column;gap:16px;min-height:260px;max-height:420px}
+.msg-row{display:flex;gap:10px;align-items:flex-start}
+.msg-row.user{flex-direction:row-reverse}
+.av{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
+.av-c{background:#eef;color:#3d4fc4}
+.av-u{background:#f0f0f0;color:#555;border:1px solid #e0e0e0}
+.bubble{max-width:78%;padding:9px 13px;font-size:13px;line-height:1.55;color:#1a1a1a}
+.bubble-c{background:#f7f7f8;border:1px solid #e8e8e8;border-radius:3px 14px 14px 14px}
+.bubble-u{background:#5c6ac4;color:#fff;border-radius:14px 3px 14px 14px}
+.cmd-box{margin-top:8px;background:#fff;border:1px solid #d0d0d0;border-radius:8px;overflow:hidden}
+.cmd-box-label{font-size:10px;color:#888;padding:6px 10px 0;font-family:monospace;letter-spacing:.05em}
+.cmd-box-code{font-family:monospace;font-size:12px;color:#1a1a1a;padding:5px 10px 8px;background:#fafafa;white-space:pre-wrap;word-break:break-all}
+.cmd-box-actions{display:flex;gap:6px;padding:6px 10px 8px;border-top:1px solid #eee}
+.btn-send{height:28px;padding:0 14px;background:#0F6E56;border:none;border-radius:6px;color:#fff;font-size:12px;cursor:pointer;transition:background .15s}
+.btn-send:hover{background:#1D9E75}
+.btn-send:disabled{background:#ccc;cursor:not-allowed}
+.btn-cancel{height:28px;padding:0 12px;background:#fff;border:1px solid #d0d0d0;border-radius:6px;color:#555;font-size:12px;cursor:pointer}
+.btn-cancel:hover{border-color:#aaa}
+.typing{display:flex;gap:4px;padding:8px 13px;align-items:center}
+.typing-dot{width:7px;height:7px;border-radius:50%;background:#bbb;animation:bounce 1.2s infinite}
+.typing-dot:nth-child(2){animation-delay:.2s}
+.typing-dot:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+.input-row{display:flex;gap:8px;align-items:flex-end;padding:10px 16px;border-top:1px solid #e5e5e5}
+.chat-inp{flex:1;min-height:36px;max-height:120px;resize:none;padding:8px 12px;font-family:inherit;font-size:13px;border:1px solid #d0d0d0;border-radius:20px;line-height:1.4;outline:none;transition:border .15s}
+.chat-inp:focus{border-color:#5c6ac4}
+.chat-inp::placeholder{color:#aaa}
+.send-btn{width:34px;height:34px;border-radius:50%;background:#5c6ac4;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-bottom:1px;transition:background .15s}
+.send-btn:hover{background:#3d4fc4}
+.send-btn svg{width:14px;height:14px;fill:#fff}
+.divider{height:4px;background:#f0f0f0;border-top:1px solid #e0e0e0;border-bottom:1px solid #e0e0e0}
+.term-section{background:#0d1117}
+.term-bar{display:flex;align-items:center;gap:7px;padding:7px 12px;background:#161b22;border-bottom:1px solid #30363d}
+.tdots{display:flex;gap:5px}
+.tdot{width:10px;height:10px;border-radius:50%}
+.td1{background:#ff5f57}.td2{background:#febc2e}.td3{background:#28c840}
+.term-title{font-size:11px;color:#8b949e;flex:1;text-align:center;font-family:monospace}
+.term-clr{font-size:10px;color:#8b949e;background:none;border:1px solid #30363d;border-radius:4px;cursor:pointer;padding:2px 6px;font-family:monospace}
+.term-clr:hover{color:#e6edf3;border-color:#8b949e}
+.term-feed{min-height:200px;max-height:320px;overflow-y:auto;padding:10px 14px;font-family:'SF Mono',Monaco,monospace;font-size:12px;line-height:1.7}
+.tl{display:block}
+.tp{color:#3fb950}.tc{color:#e6edf3}.to{color:#8b949e}.tok{color:#3fb950}.terr{color:#f85149}.tinfo{color:#58a6ff}
+.term-inp-row{display:flex;align-items:center;padding:7px 14px;border-top:1px solid #30363d}
+.tp-lbl{font-size:12px;color:#3fb950;margin-right:8px;white-space:nowrap;font-family:monospace}
+.term-inp{flex:1;border:none;background:transparent;font-family:'SF Mono',Monaco,monospace;font-size:12px;color:#e6edf3;outline:none}
+.term-inp::placeholder{color:#484f58}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{display:inline-block;width:10px;height:10px;border:1.5px solid #30363d;border-top-color:#58a6ff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:5px}
+</style>
+</head>
+<body>
+<div class="header">
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="logo">Komuta Merkezi</div>
+    <div class="srv-badge">
+      <div class="srv-dot" id="srvDot"></div>
+      <span id="srvTxt" style="font-family:monospace">50.6.248.191</span>
+    </div>
+  </div>
+  <div class="engines-row">
+    <div class="eng active" id="eng-claude">
+      <div class="eng-dot" style="background:#7F77DD"></div>
+      <span>Claude</span>
+      <button class="eng-toggle on" onclick="toggleEng(event,'claude')"></button>
+    </div>
+    <div class="eng" id="eng-openclaw">
+      <div class="eng-dot" style="background:#E24B4A"></div>
+      <span>OpenClaw</span>
+      <button class="eng-toggle off" onclick="toggleEng(event,'openclaw')"></button>
+    </div>
+    <div class="eng" id="eng-openai">
+      <div class="eng-dot" style="background:#378ADD"></div>
+      <span>GPT-4o</span>
+      <button class="eng-toggle off" onclick="toggleEng(event,'openai')"></button>
+    </div>
+    <div class="eng" id="eng-gemini">
+      <div class="eng-dot" style="background:#D85A30"></div>
+      <span>Gemini</span>
+      <button class="eng-toggle off" onclick="toggleEng(event,'gemini')"></button>
+    </div>
+  </div>
+</div>
+<div class="main">
+  <div class="chat-feed" id="chatFeed">
+    <div class="msg-row">
+      <div class="av av-c">C</div>
+      <div class="bubble bubble-c">Merhaba! Sunucu işlemleri, servis yönetimi veya müzik indirme hakkında ne yapmak istiyorsun?</div>
+    </div>
+  </div>
+  <div class="input-row">
+    <textarea class="chat-inp" id="chatInp" placeholder="Bir şey sor veya görev ver... (Enter gönder, Shift+Enter yeni satır)" rows="1" onkeydown="handleKey(event)" oninput="autoR(this)"></textarea>
+    <button class="send-btn" onclick="sendMsg()">
+      <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+    </button>
+  </div>
+</div>
+<div class="divider"></div>
+<div class="term-section">
+  <div class="term-bar">
+    <div class="tdots"><div class="tdot td1"></div><div class="tdot td2"></div><div class="tdot td3"></div></div>
+    <div class="term-title">bash — root@hal-server-721123</div>
+    <button class="term-clr" onclick="clearTerm()">temizle</button>
+  </div>
+  <div class="term-feed" id="termFeed">
+    <span class="tl tinfo">Komuta Merkezi Terminal v2 — 50.6.248.191</span>
+    <span class="tl to">Onaylanan komutlar burada çalışır.</span>
+    <span class="tl"> </span>
+  </div>
+  <div class="term-inp-row">
+    <span class="tp-lbl">root@hal ➜</span>
+    <input class="term-inp" id="termInp" placeholder="komut gir..." onkeydown="if(event.key==='Enter'){const v=this.value.trim();if(v){execCmd(v);this.value='';}}" />
+  </div>
+</div>
+<script>
+const API='/muzik';
+const engines={claude:true,openclaw:false,openai:false,gemini:false};
+let thinking=false;
+
+async function checkSrv(){
+  try{
+    const r=await fetch(API+'/health');
+    if(r.ok){document.getElementById('srvDot').style.background='#3fb950';document.getElementById('srvTxt').textContent='50.6.248.191 ✓';}
+  }catch(e){document.getElementById('srvDot').style.background='#f85149';}
+}
+
+function toggleEng(e,id){
+  e.stopPropagation();
+  engines[id]=!engines[id];
+  const btn=e.target;
+  const card=document.getElementById('eng-'+id);
+  if(engines[id]){btn.className='eng-toggle on';card.classList.add('active');addMsg('claude',id+' motoru aktif edildi.','c');}
+  else{btn.className='eng-toggle off';card.classList.remove('active');addMsg('claude',id+' motoru devre dışı bırakıldı.','c');}
+}
+
+function autoR(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
+function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}}
+
+function addMsg(role,content,type,cmd){
+  const feed=document.getElementById('chatFeed');
+  const row=document.createElement('div');
+  row.className='msg-row'+(role==='user'?' user':'');
+  const av=document.createElement('div');
+  av.className='av '+(role==='user'?'av-u':'av-c');
+  av.textContent=role==='user'?'S':'C';
+  const bbl=document.createElement('div');
+  bbl.className='bubble '+(role==='user'?'bubble-u':'bubble-c');
+  bbl.textContent=content;
+  if(cmd){
+    const box=document.createElement('div');
+    box.className='cmd-box';
+    const safeCmd=esc(cmd);
+    box.innerHTML='<div class="cmd-box-label">önerilen komut</div><div class="cmd-box-code">'+safeCmd+'</div><div class="cmd-box-actions"><button class="btn-send" id="appBtn_'+Date.now()+'">Sunucuya gönder ↗</button><button class="btn-cancel">İptal</button></div>';
+    const appBtn=box.querySelector('.btn-send');
+    const canBtn=box.querySelector('.btn-cancel');
+    appBtn.onclick=function(){appBtn.disabled=true;canBtn.disabled=true;appBtn.textContent='gönderildi ✓';execCmd(cmd);};
+    canBtn.onclick=function(){appBtn.disabled=true;canBtn.disabled=true;box.querySelector('.cmd-box-label').textContent='iptal edildi';};
+    bbl.appendChild(box);
+  }
+  row.appendChild(av);row.appendChild(bbl);
+  feed.appendChild(row);
+  feed.scrollTop=feed.scrollHeight;
+}
+
+function showTyping(){
+  const feed=document.getElementById('chatFeed');
+  const row=document.createElement('div');
+  row.className='msg-row';row.id='typRow';
+  row.innerHTML='<div class="av av-c">C</div><div class="bubble bubble-c"><div class="typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>';
+  feed.appendChild(row);feed.scrollTop=feed.scrollHeight;
+}
+function rmTyping(){const e=document.getElementById('typRow');if(e)e.remove();}
+
+async function sendMsg(){
+  const inp=document.getElementById('chatInp');
+  const text=inp.value.trim();
+  if(!text||thinking)return;
+  inp.value='';inp.style.height='auto';
+  addMsg('user',text,'u');
+  thinking=true;showTyping();
+  await sleep(400);rmTyping();
+  const cmd=toCmd(text);
+  if(cmd)addMsg('claude',analyze(text),'c',cmd);
+  else addMsg('claude',fallback(text),'c');
+  thinking=false;
+}
+
+function analyze(t){
+  const s=t.toLowerCase();
+  if(s.includes('güncelle')||s.includes('update'))return'Güncelleme komutunu hazırladım. Onaylarsan sunucuya göndereyim.';
+  if(s.includes('log')||s.includes('hata'))return'Log çekme komutunu hazırladım. Onaylıyor musun?';
+  if(s.includes('ram')||s.includes('bellek'))return'Bellek durumu komutunu hazırladım.';
+  if(s.includes('disk'))return'Disk kullanımı komutunu hazırladım.';
+  if(s.includes('restart')||s.includes('yeniden'))return'Yeniden başlatma komutunu hazırladım. Onaylıyor musun?';
+  if(s.includes('nginx'))return'Nginx komutunu hazırladım.';
+  return'Komutu hazırladım. Sunucuya göndermemi ister misin?';
+}
+
+function fallback(t){
+  const s=t.toLowerCase();
+  if(s.includes('merhaba')||s.includes('selam'))return'Merhaba! Nasıl yardımcı olabilirim?';
+  if(s.includes('teşekkür'))return'Rica ederim! Başka bir şey var mı?';
+  return'Bunu terminal komutuna çeviremiyorum. Daha spesifik bir görev ver. Örn: "nginx loglarını göster", "ram durumu", "spotdl güncelle"';
+}
+
+function toCmd(t){
+  const s=t.toLowerCase();
+  if(s.includes('spotdl')&&(s.includes('güncelle')||s.includes('update')))return'pip install --upgrade spotdl --break-system-packages 2>&1 | tail -5';
+  if(s.includes('yt-dlp')&&(s.includes('güncelle')||s.includes('update')))return'yt-dlp -U 2>&1 | tail -3';
+  if(s.includes('nginx')&&(s.includes('reload')||s.includes('yeniden yükle')))return'nginx -s reload && echo OK';
+  if(s.includes('nginx')&&(s.includes('log')||s.includes('hata')))return'tail -20 /var/log/nginx/error.log';
+  if(s.includes('ram')||s.includes('bellek')||s.includes('memory'))return'free -m';
+  if(s.includes('disk'))return'df -h /';
+  if(s.includes('pm2'))return'pm2 list 2>&1';
+  if((s.includes('docker')||s.includes('muzik'))&&(s.includes('restart')||s.includes('yeniden')))return'docker restart muzik && echo Tamam';
+  if(s.includes('uptime'))return'uptime';
+  if(s.includes('log')&&s.includes('muzik'))return'docker logs muzik --tail 20 2>&1';
+  if(s.includes('cpu')||s.includes('process'))return'top -bn1 | head -15';
+  if(s.includes('port'))return'ss -tlnp';
+  if(s.includes('swap'))return'free -m | grep -i swap';
+  return null;
+}
+
+async function execCmd(cmd){
+  const feed=document.getElementById('termFeed');
+  const l=document.createElement('span');
+  l.className='tl';
+  l.innerHTML='<span class="tp">root@hal ➜</span> <span class="tc">'+esc(cmd)+'</span>';
+  feed.appendChild(l);
+  const ld=document.createElement('span');
+  ld.className='tl tinfo';
+  ld.innerHTML='<span class="spin"></span>çalıştırılıyor...';
+  feed.appendChild(ld);
+  feed.scrollTop=feed.scrollHeight;
+  try{
+    const r=await fetch(API+'/exec',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cmd})});
+    const data=await r.json();
+    ld.remove();
+    (data.output||'').trim().split('\n').forEach(line=>{
+      const el=document.createElement('span');
+      el.className='tl '+(data.error?'terr':'to');
+      el.textContent=line;
+      feed.appendChild(el);
+    });
+    const ok=document.createElement('span');
+    ok.className='tl '+(data.error?'terr':'tok');
+    ok.textContent=data.error?'✕ '+data.error:'✓ tamamlandı';
+    feed.appendChild(ok);
+    addMsg('claude',data.error?'Komut hata verdi: '+data.error:'Komut başarıyla çalıştı.','c');
+  }catch(e){
+    ld.remove();
+    const el=document.createElement('span');
+    el.className='tl terr';
+    el.textContent='/exec bağlantı hatası: '+e.message;
+    feed.appendChild(el);
+  }
+  const sp=document.createElement('span');sp.className='tl';sp.textContent=' ';
+  feed.appendChild(sp);
+  feed.scrollTop=feed.scrollHeight;
+}
+
+function clearTerm(){document.getElementById('termFeed').innerHTML='<span class="tl tinfo">Terminal temizlendi.</span><span class="tl"> </span>';}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+checkSrv();
+</script>
+</body>
+</html>
