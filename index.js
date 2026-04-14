@@ -476,3 +476,92 @@ app.post('/chat', function(req, res) {
 app.listen(3002, function() {
   console.log('Muzik calisiyor: 3002');
 });
+
+// ── Soru Kütüphanesi API ──
+const { Pool } = require('pg');
+const pgPool = new Pool({host:'localhost',database:'prome',user:'prome_user',password:'prome2026'});
+
+app.get('/sorular', async (req,res) => {
+  try {
+    const {ders,konu,zorluk,durum,kaynak,q,limit=50,offset=0} = req.query;
+    let where = [], params = [];
+    if(ders){params.push(ders);where.push(`ders=$${params.length}`);}
+    if(konu){params.push(`%${konu}%`);where.push(`konu ILIKE $${params.length}`);}
+    if(zorluk){params.push(zorluk);where.push(`zorluk=$${params.length}`);}
+    if(durum){params.push(durum);where.push(`durum=$${params.length}`);}
+    if(kaynak){params.push(kaynak);where.push(`kaynak=$${params.length}`);}
+    if(q){params.push(`%${q}%`);where.push(`soru_metni ILIKE $${params.length}`);}
+    const whereStr = where.length ? 'WHERE '+where.join(' AND ') : '';
+    params.push(parseInt(limit)); params.push(parseInt(offset));
+    const result = await pgPool.query(
+      `SELECT * FROM sorular ${whereStr} ORDER BY olusturulma DESC LIMIT $${params.length-1} OFFSET $${params.length}`,
+      params
+    );
+    const count = await pgPool.query(`SELECT COUNT(*) FROM sorular ${whereStr}`, params.slice(0,-2));
+    res.json({sorular:result.rows, toplam:parseInt(count.rows[0].count)});
+  } catch(e){res.status(500).json({error:e.message});}
+});
+
+app.get('/sorular/stats', async (req,res) => {
+  try {
+    const stats = await pgPool.query(`
+      SELECT
+        COUNT(*) as toplam,
+        COUNT(*) FILTER (WHERE durum='onaylı') as onaylı,
+        COUNT(*) FILTER (WHERE durum='taslak') as taslak,
+        COUNT(*) FILTER (WHERE kaynak='eba') as eba,
+        COUNT(*) FILTER (WHERE kaynak='ai_uretimi') as ai,
+        COUNT(*) FILTER (WHERE zorluk='kolay') as kolay,
+        COUNT(*) FILTER (WHERE zorluk='orta') as orta,
+        COUNT(*) FILTER (WHERE zorluk='zor') as zor
+      FROM sorular`);
+    res.json(stats.rows[0]);
+  } catch(e){res.status(500).json({error:e.message});}
+});
+
+app.put('/sorular/:id', async (req,res) => {
+  try {
+    const {soru_metni,secenek_a,secenek_b,secenek_c,secenek_d,dogru_cevap,cozum_aciklamasi,zorluk,durum,konu,katex_formul} = req.body;
+    await pgPool.query(
+      `UPDATE sorular SET soru_metni=$1,secenek_a=$2,secenek_b=$3,secenek_c=$4,secenek_d=$5,
+       dogru_cevap=$6,cozum_aciklamasi=$7,zorluk=$8,durum=$9,konu=$10,katex_formul=$11,guncelleme=NOW()
+       WHERE id=$12`,
+      [soru_metni,secenek_a,secenek_b,secenek_c,secenek_d,dogru_cevap,cozum_aciklamasi,zorluk,durum,konu,katex_formul,req.params.id]
+    );
+    res.json({ok:true});
+  } catch(e){res.status(500).json({error:e.message});}
+});
+
+app.delete('/sorular/:id', async (req,res) => {
+  try {
+    await pgPool.query('DELETE FROM sorular WHERE id=$1',[req.params.id]);
+    res.json({ok:true});
+  } catch(e){res.status(500).json({error:e.message});}
+});
+
+app.post('/sorular/uret', async (req,res) => {
+  try {
+    const {konu,zorluk,sinif,adet=3} = req.body;
+    const Anthropic = require('@anthropic-ai/sdk');
+    const client = new Anthropic();
+    const response = await client.messages.create({
+      model:'claude-opus-4-5', max_tokens:3000,
+      messages:[{role:'user',content:`TYMM Biyoloji ${sinif||9}. Sınıf - "${konu}" konusunda ${zorluk||'orta'} seviyede ${adet} çoktan seçmeli soru üret.
+JSON array döndür:
+[{"soru_metni":"...","secenek_a":"...","secenek_b":"...","secenek_c":"...","secenek_d":"...","dogru_cevap":"A","cozum_aciklamasi":"...","zorluk":"${zorluk||'orta'}","konu":"${konu}"}]`}]
+    });
+    const text = response.content[0].text.replace(/```json|```/g,'').trim();
+    const start = text.indexOf('['), end = text.lastIndexOf(']')+1;
+    const yeniSorular = JSON.parse(text.substring(start,end));
+    const ids = [];
+    for(const s of yeniSorular){
+      const r = await pgPool.query(
+        `INSERT INTO sorular (kaynak,ders,konu,sinif,sinav_turu,zorluk,soru_metni,secenek_a,secenek_b,secenek_c,secenek_d,dogru_cevap,cozum_aciklamasi,durum,etiketler)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id`,
+        ['ai_uretimi','Biyoloji',s.konu,sinif||'9','TYMM',s.zorluk,s.soru_metni,s.secenek_a,s.secenek_b,s.secenek_c,s.secenek_d,s.dogru_cevap,s.cozum_aciklamasi,'taslak',['biyoloji','tymm','ai']]
+      );
+      ids.push(r.rows[0].id);
+    }
+    res.json({ok:true, adet:yeniSorular.length, ids});
+  } catch(e){res.status(500).json({error:e.message});}
+});

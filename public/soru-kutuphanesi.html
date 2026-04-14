@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Soru Kütüphanesi — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --mint:#2DB87A;--mint-l:#E8F8F0;--mint-m:#A8E4C8;--mint-d:#1A7A50;--mint-dp:#0D4D32;
+  --gold:#E8A020;--gold-l:#FDF3E0;--ink:#1A2E22;--ink-s:#4A6357;--ink-t:#8AA898;
+  --bg:#F5FAF7;--white:#fff;--red:#E24B4A;--red-l:#FCEBEB;--r:10px;--r-lg:16px;
+}
+body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+.topbar{background:var(--mint-dp);padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between}
+.logo{color:white;font-weight:900;font-size:15px}
+.logo span{color:var(--gold)}
+.logo-sub{color:rgba(255,255,255,.6);font-size:11px;margin-left:8px}
+.layout{display:grid;grid-template-columns:240px 1fr;min-height:calc(100vh - 52px)}
+.sidebar{background:var(--white);border-right:1px solid var(--mint-m);padding:16px 12px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer;color:var(--ink-s);margin-bottom:2px;transition:all .12s}
+.nav-item:hover{background:var(--mint-l)}
+.nav-item.active{background:var(--mint-l);color:var(--mint-d)}
+.nav-item svg{width:15px;height:15px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.nav-sep{height:1px;background:var(--mint-m);margin:10px 4px}
+.main{padding:24px;overflow-y:auto}
+.view{display:none}
+.view.active{display:block}
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.stat-card{background:var(--white);border:1px solid var(--mint-m);border-radius:var(--r-lg);padding:16px}
+.stat-num{font-size:28px;font-weight:900;color:var(--mint-d)}
+.stat-lbl{font-size:11px;color:var(--ink-t);margin-top:2px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.stat-sub{font-size:11px;color:var(--ink-s);margin-top:4px}
+/* Filtreler */
+.filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+.filter-select{padding:7px 12px;border:1px solid var(--mint-m);border-radius:var(--r);font-family:'Nunito',sans-serif;font-size:13px;background:var(--white);color:var(--ink);cursor:pointer}
+.filter-input{padding:7px 12px;border:1px solid var(--mint-m);border-radius:var(--r);font-family:'Nunito',sans-serif;font-size:13px;color:var(--ink);width:200px}
+.filter-input::placeholder{color:var(--ink-t)}
+.btn{padding:8px 16px;border-radius:999px;border:none;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .12s}
+.btn-primary{background:var(--mint);color:white}
+.btn-primary:hover{background:var(--mint-d)}
+.btn-outline{background:transparent;border:1.5px solid var(--mint-m);color:var(--ink-s)}
+.btn-outline:hover{background:var(--mint-l)}
+.btn-danger{background:transparent;border:1.5px solid var(--red);color:var(--red)}
+.btn-danger:hover{background:var(--red-l)}
+.btn-sm{padding:5px 12px;font-size:12px}
+/* Tablo */
+.tablo-wrap{background:var(--white);border:1px solid var(--mint-m);border-radius:var(--r-lg);overflow:hidden;margin-bottom:16px}
+.tablo{width:100%;border-collapse:collapse}
+.tablo th{padding:10px 14px;font-size:11px;font-weight:700;color:var(--ink-t);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);border-bottom:1px solid var(--mint-m);text-align:left;white-space:nowrap}
+.tablo td{padding:10px 14px;font-size:13px;color:var(--ink-s);border-bottom:1px solid var(--mint-l);vertical-align:top}
+.tablo tr:last-child td{border-bottom:none}
+.tablo tr:hover td{background:var(--mint-l)}
+.soru-metni{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink);font-weight:600}
+.badge{padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;display:inline-block}
+.badge-onaylı{background:var(--mint-l);color:var(--mint-d)}
+.badge-taslak{background:var(--gold-l);color:#7a4f00}
+.badge-reddedildi{background:var(--red-l);color:var(--red)}
+.badge-kolay{background:#E8F8F0;color:#1A7A50}
+.badge-orta{background:#FDF3E0;color:#7a4f00}
+.badge-zor{background:#FCEBEB;color:#A32D2D}
+.badge-eba{background:#E6F1FB;color:#185FA5}
+.badge-ai{background:#EEEDFE;color:#534AB7}
+.pagination{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+.page-info{font-size:13px;color:var(--ink-t)}
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--white);border-radius:var(--r-lg);padding:24px;width:680px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:16px;font-weight:900;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-t);line-height:1}
+.form-group{margin-bottom:14px}
+.form-label{font-size:12px;font-weight:700;color:var(--ink-s);margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:.04em}
+.form-input{width:100%;padding:9px 12px;border:1.5px solid var(--mint-m);border-radius:var(--r);font-family:'Nunito',sans-serif;font-size:13px;color:var(--ink)}
+.form-input:focus{outline:none;border-color:var(--mint)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--mint-l)}
+/* Üretim */
+.uret-card{background:var(--white);border:1px solid var(--mint-m);border-radius:var(--r-lg);padding:20px;margin-bottom:16px}
+.uret-form{display:grid;grid-template-columns:1fr 1fr 1fr auto auto;gap:12px;align-items:end}
+.loading{display:inline-flex;gap:4px;align-items:center}
+.ldot{width:7px;height:7px;border-radius:50%;background:var(--mint);animation:lb .9s infinite}
+.ldot:nth-child(2){animation-delay:.15s}
+.ldot:nth-child(3){animation-delay:.3s}
+@keyframes lb{0%,80%,100%{transform:scale(.8);opacity:.4}40%{transform:scale(1.2);opacity:1}}
+.notif{padding:10px 14px;border-radius:var(--r);font-size:13px;font-weight:600;margin-bottom:12px;display:none}
+.notif.show{display:block}
+.notif.ok{background:var(--mint-l);color:var(--mint-d)}
+.notif.err{background:var(--red-l);color:var(--red)}
+/* Charts */
+.chart-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px}
+.chart-card{background:var(--white);border:1px solid var(--mint-m);border-radius:var(--r-lg);padding:16px}
+.chart-title{font-size:12px;font-weight:700;color:var(--ink-t);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px}
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.bar-label{font-size:12px;color:var(--ink-s);width:70px;text-align:right;flex-shrink:0}
+.bar-wrap{flex:1;height:8px;background:var(--mint-l);border-radius:999px;overflow:hidden}
+.bar-fill{height:100%;background:var(--mint);border-radius:999px;transition:width .5s}
+.bar-val{font-size:12px;font-weight:700;color:var(--mint-d);width:30px}
+@media(max-width:700px){.layout{grid-template-columns:1fr}.sidebar{display:none}.stats-grid{grid-template-columns:repeat(2,1fr)}.uret-form{grid-template-columns:1fr}.chart-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div style="display:flex;align-items:center">
+    <div class="logo">Zeka <span>İksiri</span></div>
+    <span class="logo-sub">Soru Kütüphanesi Admin</span>
+  </div>
+  <div style="font-size:12px;color:rgba(255,255,255,.6)" id="son-guncelleme"></div>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="nav-item active" onclick="showView('liste',this)">
+      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Soru Listesi
+    </div>
+    <div class="nav-item" onclick="showView('uret',this)">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      Yeni Soru Üret
+    </div>
+    <div class="nav-item" onclick="showView('istatistik',this)">
+      <svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+      İstatistikler
+    </div>
+    <div class="nav-sep"></div>
+    <div style="padding:8px 12px;font-size:11px;color:var(--ink-t)">
+      <div id="sidebar-stats-text">Yükleniyor...</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="notif" id="global-notif"></div>
+
+    <!-- LİSTE -->
+    <div class="view active" id="view-liste">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div><h2 style="font-size:18px;font-weight:900">Soru Listesi</h2><p style="font-size:13px;color:var(--ink-t);margin-top:2px" id="liste-sub">Yükleniyor...</p></div>
+        <button class="btn btn-primary" onclick="showView('uret',null)">+ Yeni Soru Üret</button>
+      </div>
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card"><div class="stat-num">—</div><div class="stat-lbl">Toplam</div></div>
+        <div class="stat-card"><div class="stat-num">—</div><div class="stat-lbl">Onaylı</div></div>
+        <div class="stat-card"><div class="stat-num">—</div><div class="stat-lbl">Taslak</div></div>
+        <div class="stat-card"><div class="stat-num">—</div><div class="stat-lbl">AI Üretimi</div></div>
+      </div>
+      <div class="filters">
+        <input type="text" class="filter-input" placeholder="Soru ara..." id="f-arama" oninput="debounceLoad()">
+        <select class="filter-select" id="f-durum" onchange="loadSorular()">
+          <option value="">Tüm Durumlar</option>
+          <option value="onaylı">Onaylı</option>
+          <option value="taslak">Taslak</option>
+          <option value="reddedildi">Reddedildi</option>
+        </select>
+        <select class="filter-select" id="f-zorluk" onchange="loadSorular()">
+          <option value="">Tüm Zorluklar</option>
+          <option value="kolay">Kolay</option>
+          <option value="orta">Orta</option>
+          <option value="zor">Zor</option>
+        </select>
+        <select class="filter-select" id="f-kaynak" onchange="loadSorular()">
+          <option value="">Tüm Kaynaklar</option>
+          <option value="eba">EBA</option>
+          <option value="ai_uretimi">AI Üretimi</option>
+          <option value="manuel">Manuel</option>
+        </select>
+        <button class="btn btn-outline btn-sm" onclick="resetFilters()">Sıfırla</button>
+      </div>
+      <div class="tablo-wrap">
+        <table class="tablo">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Soru</th>
+              <th>Konu</th>
+              <th>Zorluk</th>
+              <th>Kaynak</th>
+              <th>Durum</th>
+              <th>İşlemler</th>
+            </tr>
+          </thead>
+          <tbody id="tablo-body">
+            <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--ink-t)">Yükleniyor...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination">
+        <span class="page-info" id="page-info"></span>
+        <button class="btn btn-outline btn-sm" id="btn-prev" onclick="prevPage()" disabled>← Önceki</button>
+        <button class="btn btn-outline btn-sm" id="btn-next" onclick="nextPage()">Sonraki →</button>
+      </div>
+    </div>
+
+    <!-- ÜRET -->
+    <div class="view" id="view-uret">
+      <div style="margin-bottom:24px"><h2 style="font-size:18px;font-weight:900">Yeni Soru Üret</h2><p style="font-size:13px;color:var(--ink-t);margin-top:2px">Claude API ile otomatik soru üretimi</p></div>
+      <div class="uret-card">
+        <div class="chart-title">Üretim Parametreleri</div>
+        <div class="uret-form">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Konu</label>
+            <input type="text" class="form-input" id="u-konu" placeholder="ör: Hücre yapısı" value="Biyolojinin Önemi">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Zorluk</label>
+            <select class="form-input" id="u-zorluk">
+              <option value="kolay">Kolay</option>
+              <option value="orta" selected>Orta</option>
+              <option value="zor">Zor</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Sınıf</label>
+            <select class="form-input" id="u-sinif">
+              <option value="9" selected>9. Sınıf</option>
+              <option value="10">10. Sınıf</option>
+              <option value="11">11. Sınıf</option>
+              <option value="12">12. Sınıf</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Adet</label>
+            <select class="form-input" id="u-adet">
+              <option value="3" selected>3</option>
+              <option value="5">5</option>
+              <option value="10">10</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0;display:flex;align-items:flex-end">
+            <button class="btn btn-primary" id="uret-btn" onclick="uretSoru()" style="white-space:nowrap">Üret →</button>
+          </div>
+        </div>
+      </div>
+      <div id="uret-sonuc"></div>
+    </div>
+
+    <!-- İSTATİSTİK -->
+    <div class="view" id="view-istatistik">
+      <div style="margin-bottom:24px"><h2 style="font-size:18px;font-weight:900">İstatistikler</h2><p style="font-size:13px;color:var(--ink-t);margin-top:2px">Soru bankası analizi</p></div>
+      <div class="chart-row" id="charts-area">
+        <div class="chart-card"><div class="chart-title">Durum Dağılımı</div><div id="chart-durum"></div></div>
+        <div class="chart-card"><div class="chart-title">Zorluk Dağılımı</div><div id="chart-zorluk"></div></div>
+        <div class="chart-card"><div class="chart-title">Kaynak Dağılımı</div><div id="chart-kaynak"></div></div>
+      </div>
+      <div style="background:var(--white);border:1px solid var(--mint-m);border-radius:var(--r-lg);padding:16px" id="istat-detay"></div>
+    </div>
+  </div>
+</div>
+
+<!-- DÜZENLE MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-title">
+      Soruyu Düzenle
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div id="modal-form"></div>
+  </div>
+</div>
+
+<script>
+const BASE = 'https://50.6.248.191/muzik';
+let currentPage = 0;
+const PAGE_SIZE = 20;
+let totalSorular = 0;
+let debounceTimer = null;
+
+function showView(name, navEl){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  if(navEl){document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));navEl.classList.add('active');}
+  if(name==='liste'){loadStats();loadSorular();}
+  if(name==='istatistik')loadIstatistik();
+}
+
+function showNotif(msg, type='ok'){
+  const el=document.getElementById('global-notif');
+  el.textContent=msg;el.className='notif show '+type;
+  setTimeout(()=>el.className='notif',3000);
+}
+
+function debounceLoad(){
+  clearTimeout(debounceTimer);
+  debounceTimer=setTimeout(()=>{currentPage=0;loadSorular();},400);
+}
+
+function resetFilters(){
+  document.getElementById('f-arama').value='';
+  document.getElementById('f-durum').value='';
+  document.getElementById('f-zorluk').value='';
+  document.getElementById('f-kaynak').value='';
+  currentPage=0;loadSorular();
+}
+
+async function loadStats(){
+  try{
+    const r=await fetch(`${BASE}/sorular/stats`);
+    const s=await r.json();
+    document.getElementById('stats-grid').innerHTML=`
+      <div class="stat-card"><div class="stat-num">${s.toplam}</div><div class="stat-lbl">Toplam</div><div class="stat-sub">soru</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--mint-d)">${s.onaylı}</div><div class="stat-lbl">Onaylı</div><div class="stat-sub">%${Math.round(s.onaylı/s.toplam*100)} oran</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:#7a4f00">${s.taslak}</div><div class="stat-lbl">Taslak</div><div class="stat-sub">inceleme bekliyor</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:#534AB7">${s.ai}</div><div class="stat-lbl">AI Üretimi</div><div class="stat-sub">${s.eba} EBA kaynaklı</div></div>`;
+    document.getElementById('sidebar-stats-text').innerHTML=`
+      <div style="margin-bottom:4px;font-weight:700;color:var(--ink-s)">Toplam: ${s.toplam}</div>
+      <div>✓ Onaylı: ${s.onaylı}</div>
+      <div>⏳ Taslak: ${s.taslak}</div>
+      <div style="margin-top:4px">Kolay: ${s.kolay} · Orta: ${s.orta} · Zor: ${s.zor}</div>`;
+    document.getElementById('son-guncelleme').textContent='Son güncelleme: '+new Date().toLocaleTimeString('tr-TR');
+  }catch(e){console.error(e);}
+}
+
+async function loadSorular(){
+  const arama=document.getElementById('f-arama').value;
+  const durum=document.getElementById('f-durum').value;
+  const zorluk=document.getElementById('f-zorluk').value;
+  const kaynak=document.getElementById('f-kaynak').value;
+  const params=new URLSearchParams({limit:PAGE_SIZE,offset:currentPage*PAGE_SIZE});
+  if(arama)params.set('q',arama);
+  if(durum)params.set('durum',durum);
+  if(zorluk)params.set('zorluk',zorluk);
+  if(kaynak)params.set('kaynak',kaynak);
+
+  document.getElementById('tablo-body').innerHTML=`<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--ink-t)"><span class="loading"><span class="ldot"></span><span class="ldot"></span><span class="ldot"></span></span></td></tr>`;
+
+  try{
+    const r=await fetch(`${BASE}/sorular?${params}`);
+    const data=await r.json();
+    totalSorular=data.toplam;
+    document.getElementById('liste-sub').textContent=`${data.toplam} soru bulundu`;
+    updatePagination();
+
+    if(!data.sorular.length){
+      document.getElementById('tablo-body').innerHTML=`<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--ink-t)">Soru bulunamadı.</td></tr>`;
+      return;
+    }
+
+    document.getElementById('tablo-body').innerHTML=data.sorular.map(s=>`
+      <tr>
+        <td style="color:var(--ink-t);font-size:12px">#${s.id}</td>
+        <td><div class="soru-metni" title="${s.soru_metni}">${s.soru_metni||'—'}</div></td>
+        <td style="font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.konu||'—'}</td>
+        <td><span class="badge badge-${s.zorluk||'orta'}">${s.zorluk||'orta'}</span></td>
+        <td><span class="badge badge-${s.kaynak==='eba'?'eba':'ai'}">${s.kaynak==='eba'?'EBA':'AI'}</span></td>
+        <td><span class="badge badge-${s.durum||'taslak'}">${s.durum||'taslak'}</span></td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-outline btn-sm" onclick="editSoru(${s.id})" style="margin-right:4px">Düzenle</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteSoru(${s.id},'${(s.soru_metni||'').substring(0,30).replace(/'/g,"\\'")}')">Sil</button>
+        </td>
+      </tr>`).join('');
+  }catch(e){
+    document.getElementById('tablo-body').innerHTML=`<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--red)">Bağlantı hatası: ${e.message}</td></tr>`;
+  }
+}
+
+function updatePagination(){
+  const total=Math.ceil(totalSorular/PAGE_SIZE);
+  document.getElementById('page-info').textContent=`Sayfa ${currentPage+1} / ${total||1} (${totalSorular} soru)`;
+  document.getElementById('btn-prev').disabled=currentPage===0;
+  document.getElementById('btn-next').disabled=(currentPage+1)*PAGE_SIZE>=totalSorular;
+}
+function prevPage(){if(currentPage>0){currentPage--;loadSorular();}}
+function nextPage(){if((currentPage+1)*PAGE_SIZE<totalSorular){currentPage++;loadSorular();}}
+
+async function editSoru(id){
+  try{
+    const r=await fetch(`${BASE}/sorular?limit=1&offset=0`);
+    // ID'ye göre direkt çekelim
+    const r2=await fetch(`${BASE}/sorular?q=&limit=200&offset=0`);
+    const data=await r2.json();
+    const s=data.sorular.find(x=>x.id===id);
+    if(!s)return;
+    document.getElementById('modal-form').innerHTML=`
+      <div class="form-group">
+        <label class="form-label">Soru Metni</label>
+        <textarea class="form-input" id="e-soru" rows="3">${s.soru_metni||''}</textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">A Şıkkı</label><input class="form-input" id="e-a" value="${s.secenek_a||''}"></div>
+        <div class="form-group"><label class="form-label">B Şıkkı</label><input class="form-input" id="e-b" value="${s.secenek_b||''}"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">C Şıkkı</label><input class="form-input" id="e-c" value="${s.secenek_c||''}"></div>
+        <div class="form-group"><label class="form-label">D Şıkkı</label><input class="form-input" id="e-d" value="${s.secenek_d||''}"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Doğru Cevap</label>
+          <select class="form-input" id="e-dogru">
+            ${['A','B','C','D'].map(h=>`<option value="${h}"${s.dogru_cevap===h?' selected':''}>${h}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Zorluk</label>
+          <select class="form-input" id="e-zorluk">
+            ${['kolay','orta','zor'].map(z=>`<option value="${z}"${s.zorluk===z?' selected':''}>${z}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Durum</label>
+          <select class="form-input" id="e-durum">
+            ${['taslak','onaylı','reddedildi'].map(d=>`<option value="${d}"${s.durum===d?' selected':''}>${d}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Konu</label>
+          <input class="form-input" id="e-konu" value="${s.konu||''}">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Çözüm Açıklaması</label>
+        <textarea class="form-input" id="e-cozum" rows="2">${s.cozum_aciklamasi||''}</textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">KaTeX Formül (opsiyonel)</label>
+        <input class="form-input" id="e-katex" value="${s.katex_formul||''}" placeholder="ör: \\frac{1}{2}">
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-outline" onclick="closeModal()">İptal</button>
+        <button class="btn btn-primary" onclick="saveSoru(${id})">Kaydet</button>
+      </div>`;
+    document.getElementById('modal-overlay').classList.add('open');
+  }catch(e){showNotif('Hata: '+e.message,'err');}
+}
+
+async function saveSoru(id){
+  try{
+    const body={
+      soru_metni:document.getElementById('e-soru').value,
+      secenek_a:document.getElementById('e-a').value,
+      secenek_b:document.getElementById('e-b').value,
+      secenek_c:document.getElementById('e-c').value,
+      secenek_d:document.getElementById('e-d').value,
+      dogru_cevap:document.getElementById('e-dogru').value,
+      zorluk:document.getElementById('e-zorluk').value,
+      durum:document.getElementById('e-durum').value,
+      konu:document.getElementById('e-konu').value,
+      cozum_aciklamasi:document.getElementById('e-cozum').value,
+      katex_formul:document.getElementById('e-katex').value,
+    };
+    const r=await fetch(`${BASE}/sorular/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const data=await r.json();
+    if(data.ok){showNotif('Soru güncellendi ✓');closeModal();loadSorular();loadStats();}
+    else showNotif('Hata: '+data.error,'err');
+  }catch(e){showNotif('Hata: '+e.message,'err');}
+}
+
+async function deleteSoru(id, preview){
+  if(!confirm(`"${preview}..." sorusunu silmek istediğinize emin misiniz?`))return;
+  try{
+    const r=await fetch(`${BASE}/sorular/${id}`,{method:'DELETE'});
+    const data=await r.json();
+    if(data.ok){showNotif('Soru silindi');loadSorular();loadStats();}
+    else showNotif('Hata: '+data.error,'err');
+  }catch(e){showNotif('Hata: '+e.message,'err');}
+}
+
+function closeModal(){document.getElementById('modal-overlay').classList.remove('open');}
+
+async function uretSoru(){
+  const konu=document.getElementById('u-konu').value;
+  const zorluk=document.getElementById('u-zorluk').value;
+  const sinif=document.getElementById('u-sinif').value;
+  const adet=document.getElementById('u-adet').value;
+  if(!konu){showNotif('Konu giriniz','err');return;}
+
+  const btn=document.getElementById('uret-btn');
+  btn.innerHTML='<span class="loading"><span class="ldot"></span><span class="ldot"></span><span class="ldot"></span></span>';
+  btn.disabled=true;
+  document.getElementById('uret-sonuc').innerHTML='';
+
+  try{
+    const r=await fetch(`${BASE}/sorular/uret`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({konu,zorluk,sinif,adet:parseInt(adet)})
+    });
+    const data=await r.json();
+    if(data.ok){
+      showNotif(`${data.adet} soru üretildi ve kaydedildi ✓`);
+      // Üretilen soruları göster
+      const r2=await fetch(`${BASE}/sorular?kaynak=ai_uretimi&limit=${adet}&offset=0`);
+      const d2=await r2.json();
+      document.getElementById('uret-sonuc').innerHTML=`
+        <div style="margin-bottom:12px;font-size:13px;font-weight:700;color:var(--mint-d)">${data.adet} yeni soru oluşturuldu:</div>
+        ${d2.sorular.slice(0,parseInt(adet)).map(s=>`
+          <div style="background:var(--white);border:1px solid var(--mint-m);border-radius:var(--r-lg);padding:14px;margin-bottom:8px">
+            <div style="font-size:13px;font-weight:700;margin-bottom:8px">${s.soru_metni}</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px">
+              ${['a','b','c','d'].map(h=>`<div style="font-size:12px;padding:4px 8px;border-radius:6px;background:${s.dogru_cevap===h.toUpperCase()?'var(--mint-l)':'var(--bg)'}"><span style="font-weight:700;color:var(--mint-d)">${h.toUpperCase()})</span> ${s['secenek_'+h]||'—'}</div>`).join('')}
+            </div>
+            <div style="font-size:12px;color:var(--ink-t)">💡 ${s.cozum_aciklamasi||'—'}</div>
+            <div style="display:flex;gap:6px;margin-top:8px">
+              <span class="badge badge-${s.zorluk}">${s.zorluk}</span>
+              <span class="badge badge-taslak">taslak</span>
+              <button class="btn btn-outline btn-sm" onclick="editSoru(${s.id})" style="margin-left:auto">Düzenle & Onayla</button>
+            </div>
+          </div>`).join('')}`;
+      loadStats();
+    }else showNotif('Hata: '+data.error,'err');
+  }catch(e){showNotif('Bağlantı hatası: '+e.message,'err');}
+  finally{btn.textContent='Üret →';btn.disabled=false;}
+}
+
+async function loadIstatistik(){
+  try{
+    const r=await fetch(`${BASE}/sorular/stats`);
+    const s=await r.json();
+    const toplam=parseInt(s.toplam)||1;
+
+    function barChart(items, containerId){
+      const max=Math.max(...items.map(i=>i.val))||1;
+      document.getElementById(containerId).innerHTML=items.map(i=>`
+        <div class="bar-row">
+          <span class="bar-label">${i.label}</span>
+          <div class="bar-wrap"><div class="bar-fill" style="width:${Math.round(i.val/max*100)}%"></div></div>
+          <span class="bar-val">${i.val}</span>
+        </div>`).join('');
+    }
+
+    barChart([
+      {label:'Onaylı',val:parseInt(s.onaylı)||0},
+      {label:'Taslak',val:parseInt(s.taslak)||0},
+      {label:'Reddedildi',val:parseInt(s.reddedildi)||0},
+    ],'chart-durum');
+
+    barChart([
+      {label:'Kolay',val:parseInt(s.kolay)||0},
+      {label:'Orta',val:parseInt(s.orta)||0},
+      {label:'Zor',val:parseInt(s.zor)||0},
+    ],'chart-zorluk');
+
+    barChart([
+      {label:'EBA',val:parseInt(s.eba)||0},
+      {label:'AI',val:parseInt(s.ai)||0},
+      {label:'Manuel',val:toplam-parseInt(s.eba)-parseInt(s.ai)||0},
+    ],'chart-kaynak');
+
+    document.getElementById('istat-detay').innerHTML=`
+      <div class="chart-title">Özet</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+        <div><div style="font-size:22px;font-weight:900;color:var(--mint-d)">${s.toplam}</div><div style="font-size:12px;color:var(--ink-t)">Toplam Soru</div></div>
+        <div><div style="font-size:22px;font-weight:900;color:var(--mint-d)">%${Math.round(parseInt(s.onaylı)/toplam*100)}</div><div style="font-size:12px;color:var(--ink-t)">Onay Oranı</div></div>
+        <div><div style="font-size:22px;font-weight:900;color:#534AB7">${s.ai}</div><div style="font-size:12px;color:var(--ink-t)">AI Üretimi</div></div>
+        <div><div style="font-size:22px;font-weight:900;color:#185FA5">${s.eba}</div><div style="font-size:12px;color:var(--ink-t)">EBA Kaynaklı</div></div>
+      </div>`;
+  }catch(e){document.getElementById('charts-area').innerHTML=`<div style="color:var(--red);font-size:13px">Bağlantı hatası: ${e.message}</div>`;}
+}
+
+// Init
+loadStats();
+loadSorular();
+</script>
+</body>
+</html>
