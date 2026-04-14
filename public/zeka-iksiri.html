@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zeka İksiri — Öğrenci Paneli</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --mint:#2DB87A;--mint-l:#E8F8F0;--mint-m:#A8E4C8;--mint-d:#1A7A50;--mint-dp:#0D4D32;
+  --gold:#E8A020;--gold-l:#FDF3E0;
+  --ink:#1A2E22;--ink-s:#4A6357;--ink-t:#8AA898;
+  --bg:#F5FAF7;--white:#FFFFFF;--red:#E24B4A;--red-l:#FCEBEB;
+  --r:12px;--r-lg:18px;
+}
+body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color:var(--ink);display:flex;flex-direction:column}
+.app{display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:var(--mint-dp);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:52px;flex-shrink:0}
+.topbar-logo{color:white;font-weight:900;font-size:16px}
+.topbar-logo span{color:var(--gold)}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.topbar-pts{background:rgba(255,255,255,.15);border-radius:999px;padding:4px 12px;font-size:12px;font-weight:700;color:white;display:flex;align-items:center;gap:5px}
+.pts-dot{width:7px;height:7px;border-radius:50%;background:var(--gold)}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--mint);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:white;cursor:pointer}
+.main{display:flex;flex:1;overflow:hidden}
+.sidebar{width:190px;background:var(--white);border-right:1px solid var(--mint-m);padding:16px 10px;flex-shrink:0;display:flex;flex-direction:column;gap:2px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer;color:var(--ink-s);transition:all .12s}
+.nav-item:hover{background:var(--mint-l)}
+.nav-item.active{background:var(--mint-l);color:var(--mint-d)}
+.nav-item svg{width:16px;height:16px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.nav-sep{height:1px;background:var(--mint-m);margin:8px 4px}
+.content{flex:1;overflow-y:auto;padding:20px}
+.view{display:none}
+.view.active{display:block}
+.greeting{margin-bottom:20px}
+.greeting h2{font-size:20px;font-weight:900;margin-bottom:2px}
+.greeting p{font-size:13px;color:var(--ink-s)}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+.stat-card{background:var(--white);border:1px solid var(--mint-m);border-radius:var(--r);padding:14px}
+.stat-label{font-size:11px;color:var(--ink-t);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.stat-val{font-size:22px;font-weight:900;color:var(--ink)}
+.stat-sub{font-size:11px;color:var(--mint-d);margin-top:2px;font-weight:600}
+.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.section-head h3{font-size:14px;font-weight:900;color:var(--ink)}
+.section-head a{font-size:12px;color:var(--mint-d);font-weight:700;cursor:pointer;text-decoration:none}
+.subject-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px}
+.subj-card{background:var(--white);border:1.5px solid var(--mint-m);border-radius:var(--r-lg);padding:16px;cursor:pointer;transition:border-color .12s}
+.subj-card:hover{border-color:var(--mint)}
+.subj-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.subj-icon{width:36px;height:36px;border-radius:10px;background:var(--mint-l);display:flex;align-items:center;justify-content:center;font-size:16px}
+.subj-pct{font-size:13px;font-weight:900;color:var(--mint-d)}
+.subj-name{font-size:13px;font-weight:700;margin-bottom:6px}
+.prog-bar{height:5px;background:var(--mint-m);border-radius:999px;overflow:hidden}
+.prog-fill{height:100%;background:var(--mint);border-radius:999px}
+.subj-meta{font-size:11px;color:var(--ink-t);margin-top:5px}
+.today-box{background:var(--mint);border-radius:var(--r-lg);padding:18px;color:white;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.today-left h3{font-size:14px;font-weight:700;opacity:.85;margin-bottom:4px}
+.today-left strong{font-size:16px;display:block;margin-bottom:10px}
+.start-btn{background:white;color:var(--mint-d);border:none;border-radius:999px;padding:8px 18px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:900;cursor:pointer}
+.today-streak{text-align:center}
+.streak-num{font-size:28px;font-weight:900}
+.streak-lbl{font-size:11px;opacity:.8}
+.activity-list{display:flex;flex-direction:column;gap:8px}
+.act-item{background:var(--white);border:1px solid var(--mint-m);border-radius:var(--r);padding:12px 14px;display:flex;align-items:center;gap:12px}
+.act-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.act-dot.done{background:var(--mint)}
+.act-dot.partial{background:var(--gold)}
+.act-text{flex:1;font-size:13px;color:var(--ink-s)}
+.act-text strong{color:var(--ink);display:block;font-size:13px}
+.act-score{font-size:12px;font-weight:700;color:var(--mint-d)}
+.lessons-list{display:flex;flex-direction:column;gap:8px}
+.lesson-item{background:var(--white);border:1.5px solid var(--mint-m);border-radius:var(--r-lg);padding:14px 16px;cursor:pointer;transition:all .12s;display:flex;align-items:center;gap:12px}
+.lesson-item:hover:not(.locked){border-color:var(--mint);background:var(--mint-l)}
+.lesson-item.locked{opacity:.55;cursor:not-allowed}
+.lesson-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.lesson-body{flex:1}
+.lesson-name{font-size:13px;font-weight:700;margin-bottom:2px}
+.lesson-meta{font-size:11px;color:var(--ink-t)}
+.lesson-badge{padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700}
+.badge-done{background:var(--mint-l);color:var(--mint-d)}
+.badge-active{background:var(--mint);color:white}
+.badge-locked{background:#eee;color:#999}
+.quiz-view{max-width:560px;margin:0 auto}
+.quiz-header{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.quiz-back{background:none;border:none;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;color:var(--mint-d);cursor:pointer;display:flex;align-items:center;gap:4px;padding:0}
+.quiz-prog-wrap{flex:1;height:6px;background:var(--mint-m);border-radius:999px;overflow:hidden}
+.quiz-prog{height:100%;background:var(--mint);border-radius:999px;transition:width .3s}
+.quiz-count{font-size:12px;color:var(--ink-t);font-weight:700;white-space:nowrap}
+.quiz-q-card{background:var(--white);border:1.5px solid var(--mint-m);border-radius:var(--r-lg);padding:24px;margin-bottom:16px}
+.quiz-topic{font-size:11px;font-weight:700;color:var(--mint-d);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.quiz-q{font-size:16px;font-weight:700;line-height:1.5;margin-bottom:0}
+.quiz-opts{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+.quiz-opt{background:var(--white);border:1.5px solid var(--mint-m);border-radius:var(--r);padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:all .12s;font-size:14px;font-weight:600;color:var(--ink)}
+.quiz-opt:hover:not(.selected):not(.correct):not(.wrong){border-color:var(--mint);background:var(--mint-l)}
+.quiz-opt.selected{border-color:var(--mint);background:var(--mint-l)}
+.quiz-opt.correct{border-color:var(--mint);background:var(--mint-l);color:var(--mint-d)}
+.quiz-opt.wrong{border-color:var(--red);background:var(--red-l);color:var(--red)}
+.opt-letter{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--mint-m);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;flex-shrink:0;transition:all .12s}
+.quiz-opt.correct .opt-letter{background:var(--mint);border-color:var(--mint);color:white}
+.quiz-opt.wrong .opt-letter{background:var(--red);border-color:var(--red);color:white}
+.quiz-actions{display:flex;justify-content:flex-end}
+.q-btn{padding:10px 22px;border-radius:999px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all .12s}
+.q-btn-primary{background:var(--mint);color:white}
+.q-btn-primary:hover{background:var(--mint-d)}
+.q-btn-primary:disabled{background:var(--mint-m);cursor:not-allowed}
+.q-btn-outline{background:transparent;border:1.5px solid var(--mint-m);color:var(--ink-s)}
+.feedback-box{padding:12px 16px;border-radius:var(--r);font-size:13px;font-weight:600;margin-bottom:16px;display:none}
+.feedback-box.correct{background:var(--mint-l);color:var(--mint-d);border:1px solid var(--mint-m);display:block}
+.feedback-box.wrong{background:var(--red-l);color:var(--red);border:1px solid #f5c0c0;display:block}
+.result-view{text-align:center;padding:32px 16px}
+.result-circle{width:96px;height:96px;border-radius:50%;background:var(--mint-l);border:3px solid var(--mint);display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto 20px}
+.result-score{font-size:28px;font-weight:900;color:var(--mint-d)}
+.result-total{font-size:12px;color:var(--ink-t)}
+.result-msg{font-size:18px;font-weight:900;margin-bottom:8px}
+.result-sub{font-size:13px;color:var(--ink-s);margin-bottom:24px}
+.result-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+@media(max-width:600px){
+  .sidebar{display:none}
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+  .subject-grid{grid-template-columns:1fr}
+  .mobile-nav{display:flex !important}
+  .content{padding:14px}
+}
+.mobile-nav{display:none;background:var(--white);border-top:1px solid var(--mint-m);padding:8px 0;justify-content:space-around;flex-shrink:0}
+.mob-item{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-weight:700;color:var(--ink-t);cursor:pointer;padding:4px 8px;border-radius:8px}
+.mob-item.active{color:var(--mint-d)}
+.mob-item svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="topbar-logo">Zeka <span>İksiri</span></div>
+    <div class="topbar-right">
+      <div class="topbar-pts"><div class="pts-dot"></div>1.240 puan</div>
+      <div class="avatar">AY</div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="sidebar">
+      <div class="nav-item active" onclick="showView('dashboard',this)">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Ana Sayfa
+      </div>
+      <div class="nav-item" onclick="showView('lessons',this)">
+        <svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+        Derslerim
+      </div>
+      <div class="nav-item" onclick="showView('stats',this)">
+        <svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+        İstatistikler
+      </div>
+      <div class="nav-sep"></div>
+      <div class="nav-item" onclick="showView('settings',this)">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Ayarlar
+      </div>
+    </div>
+    <div class="content">
+      <div class="view active" id="view-dashboard">
+        <div class="greeting"><h2>Merhaba, Ayşe! 👋</h2><p>Bugün 3 konu seni bekliyor. Hazır mısın?</p></div>
+        <div class="stats-row">
+          <div class="stat-card"><div class="stat-label">Günlük Seri</div><div class="stat-val">7</div><div class="stat-sub">gün üst üste</div></div>
+          <div class="stat-card"><div class="stat-label">Bu Hafta</div><div class="stat-val">143</div><div class="stat-sub">soru çözüldü</div></div>
+          <div class="stat-card"><div class="stat-label">Başarı Oranı</div><div class="stat-val">%78</div><div class="stat-sub">son 7 günde</div></div>
+        </div>
+        <div class="today-box">
+          <div class="today-left">
+            <h3>Bugünkü hedefin</h3>
+            <strong>Sayılar — 15 soru çöz</strong>
+            <button class="start-btn" onclick="startQuiz()">Başla</button>
+          </div>
+          <div class="today-streak"><div class="streak-num">7</div><div class="streak-lbl">günlük seri</div></div>
+        </div>
+        <div class="section-head"><h3>Devam eden dersler</h3><a onclick="showView('lessons',null)">Tümünü gör</a></div>
+        <div class="subject-grid">
+          <div class="subj-card" onclick="startQuiz()">
+            <div class="subj-top"><div class="subj-icon">📐</div><div class="subj-pct">%72</div></div>
+            <div class="subj-name">Matematik</div>
+            <div class="prog-bar"><div class="prog-fill" style="width:72%"></div></div>
+            <div class="subj-meta">Sayılar · 34/47 konu</div>
+          </div>
+          <div class="subj-card">
+            <div class="subj-top"><div class="subj-icon">📖</div><div class="subj-pct">%55</div></div>
+            <div class="subj-name">Türkçe</div>
+            <div class="prog-bar"><div class="prog-fill" style="width:55%"></div></div>
+            <div class="subj-meta">Dil Bilgisi · 22/40 konu</div>
+          </div>
+          <div class="subj-card">
+            <div class="subj-top"><div class="subj-icon">⚗️</div><div class="subj-pct">%40</div></div>
+            <div class="subj-name">Fizik</div>
+            <div class="prog-bar"><div class="prog-fill" style="width:40%"></div></div>
+            <div class="subj-meta">Kuvvet · 16/40 konu</div>
+          </div>
+          <div class="subj-card">
+            <div class="subj-top"><div class="subj-icon">🧪</div><div class="subj-pct">%62</div></div>
+            <div class="subj-name">Kimya</div>
+            <div class="prog-bar"><div class="prog-fill" style="width:62%"></div></div>
+            <div class="subj-meta">Periyodik · 25/40 konu</div>
+          </div>
+        </div>
+        <div class="section-head"><h3>Son aktivite</h3></div>
+        <div class="activity-list">
+          <div class="act-item"><div class="act-dot done"></div><div class="act-text"><strong>Matematik — Sayılar</strong>15 soru · 12 doğru</div><div class="act-score">%80</div></div>
+          <div class="act-item"><div class="act-dot partial"></div><div class="act-text"><strong>Türkçe — Sözcük Türleri</strong>10 soru · 6 doğru</div><div class="act-score">%60</div></div>
+          <div class="act-item"><div class="act-dot done"></div><div class="act-text"><strong>Fizik — Kuvvet</strong>12 soru · 10 doğru</div><div class="act-score">%83</div></div>
+        </div>
+      </div>
+      <div class="view" id="view-lessons">
+        <div class="greeting"><h2>Derslerim</h2><p>Öğrenme yolculuğun — bir sonraki adım seni bekliyor</p></div>
+        <div class="section-head"><h3>Matematik · YKS TYT</h3></div>
+        <div class="lessons-list" style="margin-bottom:20px">
+          <div class="lesson-item"><div class="lesson-icon" style="background:var(--mint-l)">📐</div><div class="lesson-body"><div class="lesson-name">Seviye Tespiti</div><div class="lesson-meta">12 soru · 8 dk</div></div><span class="lesson-badge badge-done">Tamamlandı</span></div>
+          <div class="lesson-item" onclick="startQuiz()"><div class="lesson-icon" style="background:var(--mint-l)">🔢</div><div class="lesson-body"><div class="lesson-name">Sayılar ve Cebir</div><div class="lesson-meta">47 soru · devam ediyor</div></div><span class="lesson-badge badge-active">Devam et</span></div>
+          <div class="lesson-item locked"><div class="lesson-icon" style="background:#f5f5f5">📏</div><div class="lesson-body"><div class="lesson-name">Geometri ve Ölçme</div><div class="lesson-meta">Sayılar tamamlanınca açılır</div></div><span class="lesson-badge badge-locked">Kilitli</span></div>
+          <div class="lesson-item locked"><div class="lesson-icon" style="background:#f5f5f5">📊</div><div class="lesson-body"><div class="lesson-name">İstatistik ve Olasılık</div><div class="lesson-meta">Geometri tamamlanınca açılır</div></div><span class="lesson-badge badge-locked">Kilitli</span></div>
+        </div>
+        <div class="section-head"><h3>Türkçe · YKS TYT</h3></div>
+        <div class="lessons-list">
+          <div class="lesson-item"><div class="lesson-icon" style="background:var(--gold-l)">📖</div><div class="lesson-body"><div class="lesson-name">Seviye Tespiti</div><div class="lesson-meta">10 soru · 6 dk</div></div><span class="lesson-badge badge-done">Tamamlandı</span></div>
+          <div class="lesson-item"><div class="lesson-icon" style="background:var(--gold-l)">✏️</div><div class="lesson-body"><div class="lesson-name">Dil Bilgisi</div><div class="lesson-meta">38 soru · devam ediyor</div></div><span class="lesson-badge badge-active">Devam et</span></div>
+        </div>
+      </div>
+      <div class="view" id="view-quiz">
+        <div class="quiz-view" id="quiz-container"></div>
+      </div>
+      <div class="view" id="view-stats">
+        <div class="greeting"><h2>İstatistikler</h2><p>Son 30 günlük performansın</p></div>
+        <div class="stats-row" style="margin-bottom:20px">
+          <div class="stat-card"><div class="stat-label">Toplam Soru</div><div class="stat-val">847</div><div class="stat-sub">bu ay</div></div>
+          <div class="stat-card"><div class="stat-label">Ortalama</div><div class="stat-val">%74</div><div class="stat-sub">başarı oranı</div></div>
+          <div class="stat-card"><div class="stat-label">Çalışma</div><div class="stat-val">24</div><div class="stat-sub">saat bu ay</div></div>
+        </div>
+        <div class="section-head"><h3>Ders bazında başarı</h3></div>
+        <div style="display:flex;flex-direction:column;gap:12px" id="stats-bars"></div>
+      </div>
+      <div class="view" id="view-settings">
+        <div class="greeting"><h2>Ayarlar</h2><p>Hesap ve tercihlerini yönet</p></div>
+        <div style="background:var(--white);border:1px solid var(--mint-m);border-radius:var(--r-lg);overflow:hidden">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--mint-l)"><span style="font-size:13px;font-weight:700;color:var(--ink-s)">Adı Soyadı</span><span style="font-size:13px;font-weight:700">Ayşe Yılmaz</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--mint-l)"><span style="font-size:13px;font-weight:700;color:var(--ink-s)">E-posta</span><span style="font-size:13px;font-weight:700">ayse@ornek.com</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--mint-l)"><span style="font-size:13px;font-weight:700;color:var(--ink-s)">Sınıf</span><span style="font-size:13px;font-weight:700">9. Sınıf</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 18px"><span style="font-size:13px;font-weight:700;color:var(--ink-s)">Hedef Sınav</span><span style="font-size:13px;font-weight:700">YKS TYT</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="mobile-nav">
+    <div class="mob-item active" id="mob-dashboard" onclick="showView('dashboard',null);setMob('mob-dashboard')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Ana
+    </div>
+    <div class="mob-item" id="mob-lessons" onclick="showView('lessons',null);setMob('mob-lessons')">
+      <svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>Dersler
+    </div>
+    <div class="mob-item" id="mob-quiz" onclick="startQuiz()">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>Çöz
+    </div>
+    <div class="mob-item" id="mob-stats" onclick="showView('stats',null);setMob('mob-stats')">
+      <svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg>İstatistik
+    </div>
+  </div>
+</div>
+<script>
+const questions=[
+  {topic:'Sayılar ve Cebir',q:'Bir sayının %25 fazlası 100 ise, bu sayı kaçtır?',opts:['75','80','85','90'],correct:1,exp:'100 = x × 1.25 → x = 100 ÷ 1.25 = 80'},
+  {topic:'Sayılar ve Cebir',q:'2³ × 2² işleminin sonucu kaçtır?',opts:['8','16','32','64'],correct:2,exp:'2³ × 2² = 2^(3+2) = 2⁵ = 32'},
+  {topic:'Sayılar ve Cebir',q:'x + 5 = 12 denkleminin çözümü nedir?',opts:['5','6','7','8'],correct:2,exp:'x = 12 - 5 = 7'},
+  {topic:'Sayılar ve Cebir',q:'√144 + √25 = ?',opts:['13','15','17','19'],correct:2,exp:'√144 = 12, √25 = 5 → 12 + 5 = 17'},
+  {topic:'Sayılar ve Cebir',q:'15 sayısının 3\'e bölümünden 1 fazlası kaçtır?',opts:['4','5','6','7'],correct:2,exp:'15 ÷ 3 = 5 → 5 + 1 = 6'},
+];
+let cur=0,sel=null,answered=false,score=0;
+
+function showView(name,navEl){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  if(navEl){document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));navEl.classList.add('active');}
+  if(name==='stats')renderStats();
+}
+function setMob(id){document.querySelectorAll('.mob-item').forEach(m=>m.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function renderStats(){
+  const data=[['Matematik',78],['Türkçe',55],['Fizik',40],['Kimya',62],['Biyoloji',70]];
+  document.getElementById('stats-bars').innerHTML=data.map(([d,p])=>`<div style="background:var(--white);border:1px solid var(--mint-m);border-radius:var(--r);padding:14px 16px"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-size:13px;font-weight:700">${d}</span><span style="font-size:13px;font-weight:900;color:var(--mint-d)">%${p}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${p}%"></div></div></div>`).join('');
+}
+function startQuiz(){cur=0;sel=null;answered=false;score=0;showView('quiz',null);renderQ();}
+function renderQ(){
+  const c=document.getElementById('quiz-container');
+  if(cur>=questions.length){renderResult(c);return;}
+  const q=questions[cur];
+  const pct=Math.round((cur/questions.length)*100);
+  c.innerHTML=`<div class="quiz-header"><button class="quiz-back" onclick="showView('dashboard',null)">← Geri</button><div class="quiz-prog-wrap"><div class="quiz-prog" style="width:${pct}%"></div></div><div class="quiz-count">${cur+1}/${questions.length}</div></div><div class="quiz-q-card"><div class="quiz-topic">${q.topic}</div><div class="quiz-q">${q.q}</div></div><div class="quiz-opts" id="opts">${q.opts.map((o,i)=>`<div class="quiz-opt" id="opt${i}" onclick="selectOpt(${i})"><div class="opt-letter">${['A','B','C','D'][i]}</div>${o}</div>`).join('')}</div><div id="feedback" class="feedback-box"></div><div class="quiz-actions"><button class="q-btn q-btn-primary" id="cbtn" onclick="confirmAnswer()" disabled>Onayla</button></div>`;
+  sel=null;answered=false;
+}
+function selectOpt(i){
+  if(answered)return;
+  sel=i;
+  document.querySelectorAll('.quiz-opt').forEach((o,j)=>o.classList.toggle('selected',j===i));
+  document.getElementById('cbtn').disabled=false;
+}
+function confirmAnswer(){
+  if(sel===null||answered)return;
+  answered=true;
+  const q=questions[cur];
+  const ok=sel===q.correct;
+  if(ok)score++;
+  document.querySelectorAll('.quiz-opt').forEach((o,i)=>{
+    if(i===q.correct)o.classList.add('correct');
+    else if(i===sel)o.classList.add('wrong');
+  });
+  const fb=document.getElementById('feedback');
+  fb.className='feedback-box '+(ok?'correct':'wrong');
+  fb.textContent=(ok?'Doğru! ':'Yanlış. ')+q.exp;
+  const btn=document.getElementById('cbtn');
+  btn.textContent=cur<questions.length-1?'Sonraki Soru →':'Sonuçları Gör';
+  btn.onclick=()=>{cur++;renderQ();};
+}
+function renderResult(c){
+  const pct=Math.round((score/questions.length)*100);
+  const msg=pct>=80?'Harika iş! 🎉':pct>=60?'İyi gidiyorsun!':'Biraz daha pratik yapalım';
+  c.innerHTML=`<div class="result-view"><div class="result-circle"><div class="result-score">${score}/${questions.length}</div><div class="result-total">%${pct}</div></div><div class="result-msg">${msg}</div><div class="result-sub">Sayılar ve Cebir bölümünde ${score} doğru, ${questions.length-score} yanlış yaptın.</div><div class="result-btns"><button class="q-btn q-btn-primary" onclick="startQuiz()">Tekrar Çöz</button><button class="q-btn q-btn-outline" onclick="showView('dashboard',null)">Ana Sayfaya Dön</button></div></div>`;
+}
+</script>
+</body>
+</html>

@@ -4,6 +4,9 @@ node_modules/
 *.ogg
 *.flac
 *.m4a
+*.mp4
+*.webm
+*.mkv
 /tmp/
 *.bak
 .cache
