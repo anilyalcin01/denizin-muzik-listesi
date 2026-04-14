@@ -4,16 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Zeka İksiri — Öğrenci Paneli</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;900&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --mint:#2DB87A;--mint-l:#E8F8F0;--mint-m:#A8E4C8;--mint-d:#1A7A50;--mint-dp:#0D4D32;
-  --gold:#E8A020;--gold-l:#FDF3E0;
-  --ink:#1A2E22;--ink-s:#4A6357;--ink-t:#8AA898;
-  --bg:#F5FAF7;--white:#FFFFFF;--red:#E24B4A;--red-l:#FCEBEB;
-  --r:12px;--r-lg:18px;
+  --gold:#E8A020;--gold-l:#FDF3E0;--ink:#1A2E22;--ink-s:#4A6357;--ink-t:#8AA898;
+  --bg:#F5FAF7;--white:#fff;--red:#E24B4A;--red-l:#FCEBEB;--r:12px;--r-lg:18px;
 }
 body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color:var(--ink);display:flex;flex-direction:column}
 .app{display:flex;flex-direction:column;min-height:100vh}
@@ -90,7 +87,7 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color
 .quiz-count{font-size:12px;color:var(--ink-t);font-weight:700;white-space:nowrap}
 .quiz-q-card{background:var(--white);border:1.5px solid var(--mint-m);border-radius:var(--r-lg);padding:24px;margin-bottom:16px}
 .quiz-topic{font-size:11px;font-weight:700;color:var(--mint-d);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
-.quiz-q{font-size:16px;font-weight:700;line-height:1.5;margin-bottom:0}
+.quiz-q{font-size:16px;font-weight:700;line-height:1.5}
 .quiz-opts{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
 .quiz-opt{background:var(--white);border:1.5px solid var(--mint-m);border-radius:var(--r);padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:all .12s;font-size:14px;font-weight:600;color:var(--ink)}
 .quiz-opt:hover:not(.selected):not(.correct):not(.wrong){border-color:var(--mint);background:var(--mint-l)}
@@ -116,13 +113,43 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color
 .result-msg{font-size:18px;font-weight:900;margin-bottom:8px}
 .result-sub{font-size:13px;color:var(--ink-s);margin-bottom:24px}
 .result-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-@media(max-width:600px){
-  .sidebar{display:none}
-  .stats-row{grid-template-columns:repeat(2,1fr)}
-  .subject-grid{grid-template-columns:1fr}
-  .mobile-nav{display:flex !important}
-  .content{padding:14px}
-}
+/* KONU ANLATIMI */
+.konu-content-card{background:var(--white);border:1px solid var(--mint-m);border-radius:var(--r-lg);padding:20px;margin-bottom:16px;line-height:1.75;font-size:14px;color:var(--ink-s)}
+.konu-content-card h4{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:8px}
+.konu-content-card p{margin-bottom:10px}
+.konu-content-card p:last-child{margin-bottom:0}
+.key-box{background:var(--mint-l);border-radius:var(--r);padding:12px 16px;margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
+.key-pill{background:var(--white);border:1px solid var(--mint-m);border-radius:999px;padding:3px 12px;font-size:12px;font-weight:700;color:var(--mint-d)}
+.topic-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--white);border:1.5px solid var(--mint-m);border-radius:var(--r-lg);cursor:pointer;transition:all .12s;margin-bottom:8px}
+.topic-row:hover{border-color:var(--mint);background:var(--mint-l)}
+.topic-row.done{border-color:var(--mint)}
+.konu-btn{background:var(--mint);color:white;border:none;border-radius:999px;padding:10px 24px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px}
+.konu-btn:hover{background:var(--mint-d)}
+.qopt{display:flex;align-items:center;gap:10px;padding:11px 14px;border:1.5px solid var(--mint-m);border-radius:var(--r);cursor:pointer;font-size:13px;font-weight:600;color:var(--ink);transition:all .12s;margin-bottom:8px}
+.qopt:hover:not(.disabled){border-color:var(--mint);background:var(--mint-l)}
+.qopt.selected{border-color:var(--mint);background:var(--mint-l)}
+.qopt.correct{border-color:var(--mint);background:var(--mint-l);color:var(--mint-d)}
+.qopt.wrong{border-color:var(--red);background:var(--red-l);color:var(--red)}
+.qopt.disabled{cursor:not-allowed}
+.opt-c{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--mint-m);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;flex-shrink:0}
+.qopt.correct .opt-c{background:var(--mint);border-color:var(--mint);color:white}
+.qopt.wrong .opt-c{background:var(--red);border-color:var(--red);color:white}
+.konu-fb{padding:10px 14px;border-radius:var(--r);font-size:13px;font-weight:600;margin-bottom:12px;display:none}
+.konu-fb.ok{background:var(--mint-l);color:var(--mint-d);display:block}
+.konu-fb.err{background:var(--red-l);color:var(--red);display:block}
+.adapt-info{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--gold-l);border-radius:var(--r);margin-bottom:16px;font-size:12px;color:#7a4f00;font-weight:600}
+.loading-dots{display:flex;gap:6px;align-items:center;padding:20px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--mint-m);animation:bounce .9s infinite}
+.dot:nth-child(2){animation-delay:.15s}
+.dot:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,80%,100%{transform:scale(0.8);opacity:.5}40%{transform:scale(1.2);opacity:1}}
+.level-badge{padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;display:inline-block}
+.level-easy{background:#E8F8F0;color:#1A7A50}
+.level-medium{background:#FDF3E0;color:#7a4f00}
+.level-hard{background:#FCEBEB;color:#A32D2D}
+.konu-prog-bar{height:6px;background:rgba(255,255,255,.2);border-radius:999px;overflow:hidden;margin-top:6px}
+.konu-prog-fill{height:100%;background:var(--gold);border-radius:999px;transition:width .4s}
+@media(max-width:600px){.sidebar{display:none}.stats-row{grid-template-columns:repeat(2,1fr)}.subject-grid{grid-template-columns:1fr}.mobile-nav{display:flex !important}.content{padding:14px}}
 .mobile-nav{display:none;background:var(--white);border-top:1px solid var(--mint-m);padding:8px 0;justify-content:space-around;flex-shrink:0}
 .mob-item{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-weight:700;color:var(--ink-t);cursor:pointer;padding:4px 8px;border-radius:8px}
 .mob-item.active{color:var(--mint-d)}
@@ -134,7 +161,7 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color
   <div class="topbar">
     <div class="topbar-logo">Zeka <span>İksiri</span></div>
     <div class="topbar-right">
-      <div class="topbar-pts"><div class="pts-dot"></div>1.240 puan</div>
+      <div class="topbar-pts"><div class="pts-dot"></div><span id="puan-label">1.240 puan</span></div>
       <div class="avatar">AY</div>
     </div>
   </div>
@@ -148,6 +175,10 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color
         <svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
         Derslerim
       </div>
+      <div class="nav-item" onclick="showView('konu',this)">
+        <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        Konu Anlatımı
+      </div>
       <div class="nav-item" onclick="showView('stats',this)">
         <svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
         İstatistikler
@@ -159,6 +190,7 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color
       </div>
     </div>
     <div class="content">
+      <!-- DASHBOARD -->
       <div class="view active" id="view-dashboard">
         <div class="greeting"><h2>Merhaba, Ayşe! 👋</h2><p>Bugün 3 konu seni bekliyor. Hazır mısın?</p></div>
         <div class="stats-row">
@@ -176,7 +208,7 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color
         </div>
         <div class="section-head"><h3>Devam eden dersler</h3><a onclick="showView('lessons',null)">Tümünü gör</a></div>
         <div class="subject-grid">
-          <div class="subj-card" onclick="startQuiz()">
+          <div class="subj-card" onclick="showView('konu',null);renderKonuList()">
             <div class="subj-top"><div class="subj-icon">📐</div><div class="subj-pct">%72</div></div>
             <div class="subj-name">Matematik</div>
             <div class="prog-bar"><div class="prog-fill" style="width:72%"></div></div>
@@ -208,6 +240,7 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color
           <div class="act-item"><div class="act-dot done"></div><div class="act-text"><strong>Fizik — Kuvvet</strong>12 soru · 10 doğru</div><div class="act-score">%83</div></div>
         </div>
       </div>
+      <!-- DERSLER -->
       <div class="view" id="view-lessons">
         <div class="greeting"><h2>Derslerim</h2><p>Öğrenme yolculuğun — bir sonraki adım seni bekliyor</p></div>
         <div class="section-head"><h3>Matematik · YKS TYT</h3></div>
@@ -215,7 +248,6 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color
           <div class="lesson-item"><div class="lesson-icon" style="background:var(--mint-l)">📐</div><div class="lesson-body"><div class="lesson-name">Seviye Tespiti</div><div class="lesson-meta">12 soru · 8 dk</div></div><span class="lesson-badge badge-done">Tamamlandı</span></div>
           <div class="lesson-item" onclick="startQuiz()"><div class="lesson-icon" style="background:var(--mint-l)">🔢</div><div class="lesson-body"><div class="lesson-name">Sayılar ve Cebir</div><div class="lesson-meta">47 soru · devam ediyor</div></div><span class="lesson-badge badge-active">Devam et</span></div>
           <div class="lesson-item locked"><div class="lesson-icon" style="background:#f5f5f5">📏</div><div class="lesson-body"><div class="lesson-name">Geometri ve Ölçme</div><div class="lesson-meta">Sayılar tamamlanınca açılır</div></div><span class="lesson-badge badge-locked">Kilitli</span></div>
-          <div class="lesson-item locked"><div class="lesson-icon" style="background:#f5f5f5">📊</div><div class="lesson-body"><div class="lesson-name">İstatistik ve Olasılık</div><div class="lesson-meta">Geometri tamamlanınca açılır</div></div><span class="lesson-badge badge-locked">Kilitli</span></div>
         </div>
         <div class="section-head"><h3>Türkçe · YKS TYT</h3></div>
         <div class="lessons-list">
@@ -223,9 +255,15 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color
           <div class="lesson-item"><div class="lesson-icon" style="background:var(--gold-l)">✏️</div><div class="lesson-body"><div class="lesson-name">Dil Bilgisi</div><div class="lesson-meta">38 soru · devam ediyor</div></div><span class="lesson-badge badge-active">Devam et</span></div>
         </div>
       </div>
+      <!-- ANA QUIZ -->
       <div class="view" id="view-quiz">
         <div class="quiz-view" id="quiz-container"></div>
       </div>
+      <!-- KONU ANLATIMI -->
+      <div class="view" id="view-konu">
+        <div id="konu-inner"></div>
+      </div>
+      <!-- İSTATİSTİKLER -->
       <div class="view" id="view-stats">
         <div class="greeting"><h2>İstatistikler</h2><p>Son 30 günlük performansın</p></div>
         <div class="stats-row" style="margin-bottom:20px">
@@ -236,6 +274,7 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color
         <div class="section-head"><h3>Ders bazında başarı</h3></div>
         <div style="display:flex;flex-direction:column;gap:12px" id="stats-bars"></div>
       </div>
+      <!-- AYARLAR -->
       <div class="view" id="view-settings">
         <div class="greeting"><h2>Ayarlar</h2><p>Hesap ve tercihlerini yönet</p></div>
         <div style="background:var(--white);border:1px solid var(--mint-m);border-radius:var(--r-lg);overflow:hidden">
@@ -254,8 +293,8 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color
     <div class="mob-item" id="mob-lessons" onclick="showView('lessons',null);setMob('mob-lessons')">
       <svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>Dersler
     </div>
-    <div class="mob-item" id="mob-quiz" onclick="startQuiz()">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>Çöz
+    <div class="mob-item" id="mob-konu" onclick="showView('konu',null);setMob('mob-konu');renderKonuList()">
+      <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Konu
     </div>
     <div class="mob-item" id="mob-stats" onclick="showView('stats',null);setMob('mob-stats')">
       <svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg>İstatistik
@@ -263,62 +302,253 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color
   </div>
 </div>
 <script>
+/* ─── ANA QUIZ ─── */
 const questions=[
   {topic:'Sayılar ve Cebir',q:'Bir sayının %25 fazlası 100 ise, bu sayı kaçtır?',opts:['75','80','85','90'],correct:1,exp:'100 = x × 1.25 → x = 100 ÷ 1.25 = 80'},
-  {topic:'Sayılar ve Cebir',q:'2³ × 2² işleminin sonucu kaçtır?',opts:['8','16','32','64'],correct:2,exp:'2³ × 2² = 2^(3+2) = 2⁵ = 32'},
+  {topic:'Sayılar ve Cebir',q:'2³ × 2² işleminin sonucu kaçtır?',opts:['8','16','32','64'],correct:2,exp:'2³ × 2² = 2⁵ = 32'},
   {topic:'Sayılar ve Cebir',q:'x + 5 = 12 denkleminin çözümü nedir?',opts:['5','6','7','8'],correct:2,exp:'x = 12 - 5 = 7'},
-  {topic:'Sayılar ve Cebir',q:'√144 + √25 = ?',opts:['13','15','17','19'],correct:2,exp:'√144 = 12, √25 = 5 → 12 + 5 = 17'},
-  {topic:'Sayılar ve Cebir',q:'15 sayısının 3\'e bölümünden 1 fazlası kaçtır?',opts:['4','5','6','7'],correct:2,exp:'15 ÷ 3 = 5 → 5 + 1 = 6'},
+  {topic:'Sayılar ve Cebir',q:'√144 + √25 = ?',opts:['13','15','17','19'],correct:2,exp:'√144=12, √25=5 → 17'},
+  {topic:'Sayılar ve Cebir',q:'15 sayısının 3\'e bölümünden 1 fazlası kaçtır?',opts:['4','5','6','7'],correct:2,exp:'15÷3=5 → 5+1=6'},
 ];
-let cur=0,sel=null,answered=false,score=0;
+let qCur=0,qSel=null,qAnswered=false,qScore=0;
 
+/* ─── KONU ANLATIMI VERİLERİ ─── */
+const konuTopics=[
+  {id:0,name:"Biyolojiye Giriş",icon:"🔬",bolumler:[
+    {baslik:"Biyoloji Nedir?",
+     icerik:`<h4>Biyoloji Biliminin Tanımı</h4><p>Biyoloji, canlıları ve yaşam olaylarını inceleyen temel bilim dalıdır. Yunanca <em>bios</em> (yaşam) ve <em>logos</em> (bilim) kelimelerinden türemiştir.</p><p>Biyoloji; canlıların yapısını, işlevlerini, büyümesini, evrimini ve sınıflandırılmasını araştırır. Tıptan tarıma, çevre biliminden biyoteknolojiye kadar pek çok alana katkı sağlar.</p>`,
+     anahtarlar:["Canlı","Yaşam","Bilim","Gözlem"],
+     konuAciklama:"Biyoloji biliminin tanımı, alt dalları ve diğer bilimlerle ilişkisi"},
+    {baslik:"Biyolojinin Önemi",
+     icerik:`<h4>Neden Biyoloji Öğreniyoruz?</h4><p>Antibiyotiklerden aşılara, gen tedavisinden organ nakline kadar pek çok gelişme biyoloji sayesinde mümkün olmuştur.</p><p>MOXIE cihazı fotosentez ilkesinden esinlenmiştir. Mars'ta oksijen üretimi için kullanılmaktadır.</p>`,
+     anahtarlar:["Antibiyotik","Aşı","Fotosentez","MOXIE","Fleming"],
+     konuAciklama:"Biyolojinin tıp, tarım ve teknoloji alanlarına katkıları"},
+  ]},
+  {id:1,name:"Biyolojinin Dönüm Noktaları",icon:"🏆",bolumler:[
+    {baslik:"Mikroskobun Keşfi",
+     icerik:`<h4>Görünmeyeni Görmek</h4><p>Robert Hooke, 1665 yılında mikroskobu kullanarak mantar dokusunda <em>hücre</em> adını verdiği yapıları gözlemledi.</p><p>Anton van Leeuwenhoek ise güçlü mercekler yaparak bakterileri ilk kez gözlemledi.</p>`,
+     anahtarlar:["Hooke","Hücre","Leeuwenhoek","Bakteri","Micrographia"],
+     konuAciklama:"Mikroskobun icadı, Hooke ve Leeuwenhoek'un keşifleri"},
+    {baslik:"DNA ve Genetik",
+     icerik:`<h4>Yaşamın Şifresi</h4><p>1953 yılında Watson ve Crick, DNA'nın çift sarmal yapısını ortaya koydu.</p><p>Günümüzde CRISPR-Cas9 teknolojisi ile DNA üzerinde hassas düzenlemeler yapılabilmektedir.</p>`,
+     anahtarlar:["Watson","Crick","DNA","Çift sarmal","CRISPR","Mendel"],
+     konuAciklama:"DNA keşfi, Watson-Crick modeli, CRISPR teknolojisi ve kalıtımın temelleri"},
+  ]},
+  {id:2,name:"Canlıların Sınıflandırılması",icon:"🌿",bolumler:[
+    {baslik:"Sınıflandırma Sistemi",
+     icerik:`<h4>Milyonlarca Canlıyı Düzenlemek</h4><p>Carl Linnaeus, 18. yüzyılda modern sınıflandırmanın temelini attı. Binomial adlandırma sistemiyle her türe özgün isim verildi.</p><p>Sınıflandırma basamakları: Alem → Şube → Sınıf → Takım → Familya → Cins → Tür. İnsan: <em>Homo sapiens</em>.</p>`,
+     anahtarlar:["Linnaeus","Tür","Binomial","Homo sapiens","Alem"],
+     konuAciklama:"Linnaeus sınıflandırma sistemi ve binomial adlandırma"},
+  ]},
+];
+
+/* ─── STATE ─── */
+const konuProgress={};
+konuTopics.forEach(t=>t.bolumler.forEach((_,i)=>{
+  konuProgress[`${t.id}_${i}`]={read:false,correct:0,wrong:0,history:[]};
+}));
+let kCurTopic=null,kCurBolum=null,kCurQ=null,kSelOpt=null,kAnswered=false;
+let totalPuan=1240;
+
+/* ─── NAVİGASYON ─── */
 function showView(name,navEl){
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-'+name).classList.add('active');
   if(navEl){document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));navEl.classList.add('active');}
   if(name==='stats')renderStats();
+  if(name==='konu')renderKonuList();
 }
 function setMob(id){document.querySelectorAll('.mob-item').forEach(m=>m.classList.remove('active'));document.getElementById(id).classList.add('active');}
+
+/* ─── İSTATİSTİKLER ─── */
 function renderStats(){
   const data=[['Matematik',78],['Türkçe',55],['Fizik',40],['Kimya',62],['Biyoloji',70]];
   document.getElementById('stats-bars').innerHTML=data.map(([d,p])=>`<div style="background:var(--white);border:1px solid var(--mint-m);border-radius:var(--r);padding:14px 16px"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-size:13px;font-weight:700">${d}</span><span style="font-size:13px;font-weight:900;color:var(--mint-d)">%${p}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${p}%"></div></div></div>`).join('');
 }
-function startQuiz(){cur=0;sel=null;answered=false;score=0;showView('quiz',null);renderQ();}
+
+/* ─── KONU ANLATIMI ─── */
+function getLevel(ti,bi){
+  const p=konuProgress[`${ti}_${bi}`];
+  const total=p.correct+p.wrong;
+  if(!total)return'easy';
+  const rate=p.correct/total;
+  if(rate>=0.8)return'hard';
+  if(rate>=0.5)return'medium';
+  return'easy';
+}
+function getLevelLabel(l){return l==='hard'?'Zor':l==='medium'?'Orta':'Kolay';}
+
+function renderKonuList(){
+  const totalB=Object.keys(konuProgress).length;
+  const doneB=Object.values(konuProgress).filter(p=>p.read).length;
+  const pct=totalB?Math.round(doneB/totalB*100):0;
+  let html=`
+    <div style="margin-bottom:20px"><h2 style="font-size:20px;font-weight:900;margin-bottom:4px">Konu Anlatımı 📚</h2><p style="font-size:13px;color:var(--ink-s)">Oku, anla — sistem seviyeni otomatik ayarlar</p></div>
+    <div style="background:var(--mint-dp);border-radius:var(--r-lg);padding:16px 20px;margin-bottom:24px;color:white">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-size:13px;font-weight:700">Genel İlerleme</span><span style="font-size:13px;font-weight:900">${doneB}/${totalB} · %${pct}</span></div>
+      <div class="konu-prog-bar"><div class="konu-prog-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  konuTopics.forEach((t,ti)=>{
+    const tDone=t.bolumler.filter((_,bi)=>konuProgress[`${ti}_${bi}`].read).length;
+    html+=`<div style="margin-bottom:24px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><h3 style="font-size:14px;font-weight:900">${t.icon} ${t.name}</h3><span style="font-size:11px;color:var(--ink-t)">${tDone}/${t.bolumler.length} tamamlandı</span></div>`;
+    t.bolumler.forEach((b,bi)=>{
+      const p=konuProgress[`${ti}_${bi}`];
+      const total=p.correct+p.wrong;
+      const rate=total?Math.round(p.correct/total*100):0;
+      const lv=getLevel(ti,bi);
+      html+=`<div class="topic-row${p.read?' done':''}" onclick="startBolum(${ti},${bi})">
+        <div style="width:38px;height:38px;border-radius:10px;background:${p.read?'var(--mint)':'var(--mint-l)'};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${p.read?'✓':t.icon}</div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700;margin-bottom:2px">${b.baslik}</div><div style="font-size:11px;color:var(--ink-t)">${p.read?`${p.correct}D / ${p.wrong}Y · %${rate}`:' Henüz başlanmadı'}</div></div>
+        <div style="text-align:right"><span class="level-badge level-${lv}">${getLevelLabel(lv)}</span><div style="font-size:11px;font-weight:700;color:var(--mint);margin-top:4px">${p.read?'Tekrar →':'Başla →'}</div></div>
+      </div>`;
+    });
+    html+=`</div>`;
+  });
+  document.getElementById('konu-inner').innerHTML=html;
+}
+
+function startBolum(ti,bi){
+  kCurTopic=ti;kCurBolum=bi;
+  const t=konuTopics[ti],b=t.bolumler[bi];
+  document.getElementById('konu-inner').innerHTML=`
+    <button onclick="renderKonuList()" style="background:none;border:none;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;color:var(--mint-d);cursor:pointer;margin-bottom:20px">← Konulara Dön</button>
+    <div style="display:inline-flex;align-items:center;gap:6px;background:var(--mint-l);color:var(--mint-d);border-radius:999px;padding:4px 12px;font-size:11px;font-weight:700;margin-bottom:16px">${t.icon} ${t.name} · Bölüm ${bi+1}/${t.bolumler.length}</div>
+    <div style="font-size:20px;font-weight:900;margin-bottom:8px">${b.baslik}</div>
+    <div style="font-size:13px;color:var(--ink-s);margin-bottom:20px">Aşağıdaki içeriği okuyun, ardından adaptif sorularla pekiştirin.</div>
+    <div class="konu-content-card">${b.icerik}<div class="key-box">${b.anahtarlar.map(k=>`<span class="key-pill">${k}</span>`).join('')}</div></div>
+    <button class="konu-btn" onclick="fetchAdaptiveQ()">Anladım, Soruları Çöz →</button>`;
+}
+
+async function fetchAdaptiveQ(){
+  const b=konuTopics[kCurTopic].bolumler[kCurBolum];
+  const p=konuProgress[`${kCurTopic}_${kCurBolum}`];
+  const lv=getLevel(kCurTopic,kCurBolum);
+  const total=p.correct+p.wrong;
+  const histText=p.history.length>0?`\nÖnceki sorular (tekrar etme):\n${p.history.slice(-4).map(h=>`- "${h.soru}" → ${h.dogru?'DOĞRU':'YANLIŞ'}`).join('\n')}`:'';
+
+  document.getElementById('konu-inner').innerHTML=`
+    <button onclick="startBolum(${kCurTopic},${kCurBolum})" style="background:none;border:none;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;color:var(--mint-d);cursor:pointer;margin-bottom:20px">← İçeriğe Dön</button>
+    <div class="adapt-info">⚡ Adaptif sistem aktif · Seviye: ${getLevelLabel(lv)} · ${total} soru çözüldü</div>
+    <div class="loading-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span style="font-size:13px;color:var(--ink-t);margin-left:6px">Soru hazırlanıyor...</span></div>`;
+
+  const prompt=`TYMM Biyoloji 9. Sınıf - "${b.baslik}" konusu için ${getLevelLabel(lv)} seviyede 1 çoktan seçmeli soru üret.
+KONU: ${b.konuAciklama}
+KAVRAMLAR: ${b.anahtarlar.join(', ')}
+ZORLUK: ${lv==='easy'?'Kolay - temel tanımlar':lv==='medium'?'Orta - kavramlar arası ilişki':'Zor - analiz ve sentez'}
+${histText}
+SADECE şu JSON formatında yanıt ver:
+{"soru":"...","secenekler":{"A":"...","B":"...","C":"...","D":"..."},"dogru":"A","aciklama":"...","zorluk":"${lv}"}`;
+
+  try{
+    const resp=await fetch('https://50.6.248.191/muzik/chat',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:'Sen bir eğitim uzmanısın. Sadece JSON formatında yanıt ver, başka hiçbir şey yazma.',messages:[{role:'user',content:prompt}]})
+    });
+    const data=await resp.json();
+    const text=data.content[0].text.trim().replace(/```json|```/g,'').trim();
+    const start=text.indexOf('{'),end=text.lastIndexOf('}')+1;
+    kCurQ=JSON.parse(text.substring(start,end));
+    renderKonuSoru(kCurQ,lv);
+  }catch(e){
+    kCurQ=getFallbackQ(lv);
+    renderKonuSoru(kCurQ,lv);
+  }
+}
+
+function getFallbackQ(lv){
+  const qs={
+    easy:[
+      {soru:"Biyoloji biliminin temel inceleme konusu nedir?",secenekler:{A:"Canlı varlıklar",B:"Kayaçlar",C:"Gezegenler",D:"Makineler"},dogru:"A",aciklama:"Biyoloji, canlı varlıkları inceler.",zorluk:"easy"},
+      {soru:"Hücreyi ilk adlandıran kimdir?",secenekler:{A:"Darwin",B:"Robert Hooke",C:"Mendel",D:"Pasteur"},dogru:"B",aciklama:"Robert Hooke 1665'te hücreyi adlandırdı.",zorluk:"easy"},
+    ],
+    medium:[
+      {soru:"Fotosentez ile MOXIE arasındaki ilişki nedir?",secenekler:{A:"İkisi de ışık üretir",B:"MOXIE fotosentezden esinlenerek CO₂'yi O₂'ye çevirir",C:"İkisi de hayvansal süreçtir",D:"İlişki yoktur"},dogru:"B",aciklama:"MOXIE, fotosentezdeki CO₂→O₂ dönüşümünden esinlendi.",zorluk:"medium"},
+    ],
+    hard:[
+      {soru:"CRISPR teknolojisi ile Watson-Crick keşfi arasındaki bağ nedir?",secenekler:{A:"İkisi de hücre bölünmesini inceler",B:"CRISPR, Watson-Crick'in keşfettiği DNA yapısını temel alır",C:"Aynı dönemde geliştirildi",D:"Bağlantı yoktur"},dogru:"B",aciklama:"CRISPR, Watson-Crick'in 1953'te keşfettiği çift sarmal yapıdan yararlanır.",zorluk:"hard"},
+    ]
+  };
+  const arr=qs[lv]||qs.easy;
+  return arr[Math.floor(Math.random()*arr.length)];
+}
+
+function renderKonuSoru(q,lv){
+  kSelOpt=null;kAnswered=false;
+  const p=konuProgress[`${kCurTopic}_${kCurBolum}`];
+  const total=p.correct+p.wrong;
+  document.getElementById('konu-inner').innerHTML=`
+    <button onclick="startBolum(${kCurTopic},${kCurBolum})" style="background:none;border:none;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;color:var(--mint-d);cursor:pointer;margin-bottom:20px">← İçeriğe Dön</button>
+    <div class="adapt-info">⚡ Adaptif · Seviye: <strong>${getLevelLabel(lv)}</strong> · ${total} soru · ${p.correct} doğru</div>
+    <div style="background:var(--white);border:1.5px solid var(--mint-m);border-radius:var(--r-lg);padding:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <span style="font-size:11px;font-weight:700;color:var(--ink-t);text-transform:uppercase;letter-spacing:.06em">${konuTopics[kCurTopic].bolumler[kCurBolum].baslik}</span>
+        <span class="level-badge level-${lv}">${getLevelLabel(lv)}</span>
+      </div>
+      <div style="font-size:15px;font-weight:700;line-height:1.5;margin-bottom:18px">${q.soru}</div>
+      <div id="kopts">${Object.entries(q.secenekler).map(([h,m])=>`<div class="qopt" id="kopt${h}" onclick="kSelO('${h}')"><div class="opt-c">${h}</div>${m}</div>`).join('')}</div>
+      <div class="konu-fb" id="kfb"></div>
+      <div style="display:flex;justify-content:flex-end"><button class="konu-btn" id="kbtn" onclick="kOnayla()" disabled style="padding:9px 22px;font-size:13px">Onayla</button></div>
+    </div>`;
+}
+
+function kSelO(h){
+  if(kAnswered)return;kSelOpt=h;
+  document.querySelectorAll('.qopt').forEach(o=>o.classList.remove('selected'));
+  document.getElementById('kopt'+h).classList.add('selected');
+  document.getElementById('kbtn').disabled=false;
+}
+
+function kOnayla(){
+  if(!kSelOpt||kAnswered)return;kAnswered=true;
+  const q=kCurQ,ok=kSelOpt===q.dogru;
+  const k=`${kCurTopic}_${kCurBolum}`;
+  const p=konuProgress[k];
+  if(ok){p.correct++;totalPuan+=10;}else p.wrong++;
+  p.read=true;
+  p.history.push({soru:q.soru.substring(0,50),dogru:ok});
+  document.getElementById('puan-label').textContent=totalPuan+' puan';
+
+  document.querySelectorAll('.qopt').forEach(o=>{
+    const h=o.id.replace('kopt','');o.classList.add('disabled');
+    if(h===q.dogru)o.classList.add('correct');else if(h===kSelOpt)o.classList.add('wrong');
+  });
+  const fb=document.getElementById('kfb');
+  fb.className='konu-fb '+(ok?'ok':'err');
+  fb.textContent=(ok?'✓ Doğru! ':'✗ Yanlış. ')+q.aciklama;
+
+  const newLv=getLevel(kCurTopic,kCurBolum);
+  const btn=document.getElementById('kbtn');
+  btn.textContent='Yeni Soru →';btn.disabled=false;
+  btn.onclick=()=>fetchAdaptiveQ();
+
+  if(ok&&newLv!==q.zorluk){
+    btn.insertAdjacentHTML('beforebegin',`<span style="font-size:12px;color:var(--gold);font-weight:700;margin-right:8px">🔼 Seviye: ${getLevelLabel(newLv)}</span>`);
+  }
+}
+
+/* ─── ANA QUIZ ─── */
+function startQuiz(){qCur=0;qSel=null;qAnswered=false;qScore=0;showView('quiz',null);renderQ();}
 function renderQ(){
   const c=document.getElementById('quiz-container');
-  if(cur>=questions.length){renderResult(c);return;}
-  const q=questions[cur];
-  const pct=Math.round((cur/questions.length)*100);
-  c.innerHTML=`<div class="quiz-header"><button class="quiz-back" onclick="showView('dashboard',null)">← Geri</button><div class="quiz-prog-wrap"><div class="quiz-prog" style="width:${pct}%"></div></div><div class="quiz-count">${cur+1}/${questions.length}</div></div><div class="quiz-q-card"><div class="quiz-topic">${q.topic}</div><div class="quiz-q">${q.q}</div></div><div class="quiz-opts" id="opts">${q.opts.map((o,i)=>`<div class="quiz-opt" id="opt${i}" onclick="selectOpt(${i})"><div class="opt-letter">${['A','B','C','D'][i]}</div>${o}</div>`).join('')}</div><div id="feedback" class="feedback-box"></div><div class="quiz-actions"><button class="q-btn q-btn-primary" id="cbtn" onclick="confirmAnswer()" disabled>Onayla</button></div>`;
-  sel=null;answered=false;
+  if(qCur>=questions.length){renderResult(c);return;}
+  const q=questions[qCur];
+  const pct=Math.round((qCur/questions.length)*100);
+  c.innerHTML=`<div class="quiz-header"><button class="quiz-back" onclick="showView('dashboard',null)">← Geri</button><div class="quiz-prog-wrap"><div class="quiz-prog" style="width:${pct}%"></div></div><div class="quiz-count">${qCur+1}/${questions.length}</div></div><div class="quiz-q-card"><div class="quiz-topic">${q.topic}</div><div class="quiz-q">${q.q}</div></div><div class="quiz-opts" id="opts">${q.opts.map((o,i)=>`<div class="quiz-opt" id="opt${i}" onclick="selectOpt(${i})"><div class="opt-letter">${['A','B','C','D'][i]}</div>${o}</div>`).join('')}</div><div id="feedback" class="feedback-box"></div><div class="quiz-actions"><button class="q-btn q-btn-primary" id="cbtn" onclick="confirmAnswer()" disabled>Onayla</button></div>`;
+  qSel=null;qAnswered=false;
 }
-function selectOpt(i){
-  if(answered)return;
-  sel=i;
-  document.querySelectorAll('.quiz-opt').forEach((o,j)=>o.classList.toggle('selected',j===i));
-  document.getElementById('cbtn').disabled=false;
-}
+function selectOpt(i){if(qAnswered)return;qSel=i;document.querySelectorAll('.quiz-opt').forEach((o,j)=>o.classList.toggle('selected',j===i));document.getElementById('cbtn').disabled=false;}
 function confirmAnswer(){
-  if(sel===null||answered)return;
-  answered=true;
-  const q=questions[cur];
-  const ok=sel===q.correct;
-  if(ok)score++;
-  document.querySelectorAll('.quiz-opt').forEach((o,i)=>{
-    if(i===q.correct)o.classList.add('correct');
-    else if(i===sel)o.classList.add('wrong');
-  });
-  const fb=document.getElementById('feedback');
-  fb.className='feedback-box '+(ok?'correct':'wrong');
-  fb.textContent=(ok?'Doğru! ':'Yanlış. ')+q.exp;
-  const btn=document.getElementById('cbtn');
-  btn.textContent=cur<questions.length-1?'Sonraki Soru →':'Sonuçları Gör';
-  btn.onclick=()=>{cur++;renderQ();};
+  if(qSel===null||qAnswered)return;qAnswered=true;
+  const q=questions[qCur];const ok=qSel===q.correct;if(ok)qScore++;
+  document.querySelectorAll('.quiz-opt').forEach((o,i)=>{if(i===q.correct)o.classList.add('correct');else if(i===qSel)o.classList.add('wrong');});
+  const fb=document.getElementById('feedback');fb.className='feedback-box '+(ok?'correct':'wrong');fb.textContent=(ok?'Doğru! ':'Yanlış. ')+q.exp;
+  const btn=document.getElementById('cbtn');btn.textContent=qCur<questions.length-1?'Sonraki Soru →':'Sonuçları Gör';btn.onclick=()=>{qCur++;renderQ();};
 }
 function renderResult(c){
-  const pct=Math.round((score/questions.length)*100);
+  const pct=Math.round((qScore/questions.length)*100);
   const msg=pct>=80?'Harika iş! 🎉':pct>=60?'İyi gidiyorsun!':'Biraz daha pratik yapalım';
-  c.innerHTML=`<div class="result-view"><div class="result-circle"><div class="result-score">${score}/${questions.length}</div><div class="result-total">%${pct}</div></div><div class="result-msg">${msg}</div><div class="result-sub">Sayılar ve Cebir bölümünde ${score} doğru, ${questions.length-score} yanlış yaptın.</div><div class="result-btns"><button class="q-btn q-btn-primary" onclick="startQuiz()">Tekrar Çöz</button><button class="q-btn q-btn-outline" onclick="showView('dashboard',null)">Ana Sayfaya Dön</button></div></div>`;
+  c.innerHTML=`<div class="result-view"><div class="result-circle"><div class="result-score">${qScore}/${questions.length}</div><div class="result-total">%${pct}</div></div><div class="result-msg">${msg}</div><div class="result-sub">Sayılar ve Cebir: ${qScore} doğru, ${questions.length-qScore} yanlış.</div><div class="result-btns"><button class="q-btn q-btn-primary" onclick="startQuiz()">Tekrar Çöz</button><button class="q-btn q-btn-outline" onclick="showView('dashboard',null)">Ana Sayfaya Dön</button></div></div>`;
 }
 </script>
 </body>

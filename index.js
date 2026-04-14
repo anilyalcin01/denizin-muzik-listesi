@@ -210,16 +210,53 @@ function parseSpotifyTrackId(url) {
   } catch(e) { return null; }
 }
 
+function parseSpotifyPlaylistId(url) {
+  try {
+    var parsed = new URL(url);
+    var m = parsed.pathname.match(/\/(?:intl-[a-z]{2}\/)?playlist\/([a-zA-Z0-9]+)/);
+    if (m) return m[1];
+    return null;
+  } catch(e) { return null; }
+}
+
+function downloadIsrcToDir(isrc, ripDir) {
+  return new Promise(function(resolve) {
+    const https = require('https');
+    https.get('https://api.deezer.com/2.0/track/isrc:' + isrc, function(dRes) {
+      var body = '';
+      dRes.on('data', function(c) { body += c; });
+      dRes.on('end', function() {
+        var dData;
+        try { dData = JSON.parse(body); } catch(e) { return resolve({ ok: false, reason: 'deezer-parse' }); }
+        if (!dData.id) return resolve({ ok: false, reason: 'deezer-not-found' });
+        var deezerUrl = 'https://www.deezer.com/track/' + dData.id;
+        var setCfg = "python3 -c \"import tomllib,tomli_w;cfg='/root/.config/streamrip/config.toml';d=tomllib.load(open(cfg,'rb'));d['downloads']['folder']='" + ripDir + "';tomli_w.dump(d,open(cfg,'wb'))\"";
+        var step = setCfg + ' && rip -ndb url "' + deezerUrl + '"';
+        exec(step, { timeout: 120000 }, function(err) {
+          resolve({ ok: !err, reason: err ? 'rip-failed' : null });
+        });
+      });
+    }).on('error', function() { resolve({ ok: false, reason: 'deezer-net' }); });
+  });
+}
+
 app.post('/spotify', function(req, res) {
   const url = req.body.url;
   if (!url) return res.status(400).json({ error: 'URL gerekli' });
   if (!url.includes('spotify.com')) return res.status(400).json({ error: 'Geçerli Spotify URL girin' });
 
+  // Playlist URL'si ise: tüm track'leri çek, sırayla indir, zip olarak dön
+  var playlistId = parseSpotifyPlaylistId(url);
+  if (playlistId) return handleSpotifyPlaylist(playlistId, res);
+
   const ripDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ripdl-'));
 
   // 1) spotipy ile Spotify URL'den ISRC al
   var trackId = parseSpotifyTrackId(url);
-  if (!trackId) return res.status(400).json({ error: 'Gecersiz Spotify URL — track ID bulunamadi' });
+  if (!trackId) {
+    fs.rmSync(ripDir, { recursive: true, force: true });
+    return res.status(400).json({ error: 'Gecersiz Spotify URL — track ID bulunamadi' });
+  }
 
   exec('python3 /opt/muzik/spotify_isrc.py "' + trackId + '"', { timeout: 15000 }, function(err1, stdout1, stderr1) {
     var meta;
@@ -291,6 +328,69 @@ app.post('/spotify', function(req, res) {
     });
   });
 });
+
+async function handleSpotifyPlaylist(playlistId, res) {
+  const ripDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ripdl-pl-'));
+  const cleanup = function() { try { fs.rmSync(ripDir, { recursive: true, force: true }); } catch(e) {} };
+
+  // Response can be slow (100 tracks * ~20s). Disable socket timeout.
+  if (res.setTimeout) res.setTimeout(0);
+
+  // 1) Playlist'teki track'leri ve ISRC'leri al
+  var meta;
+  try {
+    meta = await new Promise(function(resolve, reject) {
+      execFile('python3', ['/opt/muzik/spotify_playlist.py', playlistId], { timeout: 60000, maxBuffer: 8 * 1024 * 1024 }, function(err, stdout, stderr) {
+        if (err) return reject(new Error(stderr || err.message));
+        try { resolve(JSON.parse(stdout.trim())); } catch(e) { reject(e); }
+      });
+    });
+  } catch(e) {
+    cleanup();
+    return res.status(500).json({ error: 'Playlist metadata alinamadi', detail: e.message });
+  }
+
+  if (!Array.isArray(meta) || !meta.length) {
+    cleanup();
+    return res.status(404).json({ error: 'Playlist bos veya track bulunamadi' });
+  }
+
+  // 2) Sırayla her track'i indir (ISRC olmayanları atla)
+  var ok = 0, failed = [];
+  for (var i = 0; i < meta.length; i++) {
+    var t = meta[i];
+    if (!t.isrc) { failed.push({ name: t.name, artist: t.artist, reason: 'no-isrc' }); continue; }
+    var result = await downloadIsrcToDir(t.isrc, ripDir);
+    if (result.ok) ok++;
+    else failed.push({ name: t.name, artist: t.artist, reason: result.reason });
+  }
+
+  // Restore default streamrip folder
+  var restoreCfg = "python3 -c \"import tomllib,tomli_w;cfg='/root/.config/streamrip/config.toml';d=tomllib.load(open(cfg,'rb'));d['downloads']['folder']='/tmp/streamrip';tomli_w.dump(d,open(cfg,'wb'))\"";
+  exec(restoreCfg, { timeout: 5000 }, function() {});
+
+  if (!ok) {
+    cleanup();
+    return res.status(500).json({ error: 'Hicbir track indirilemedi', total: meta.length, failed: failed });
+  }
+
+  // 3) İçeriği zip'le ve stream et
+  var zipPath = ripDir + '.zip';
+  exec('cd "' + ripDir + '" && zip -rq "' + zipPath + '" .', { timeout: 120000 }, function(zErr) {
+    if (zErr) { cleanup(); try { fs.unlinkSync(zipPath); } catch(e) {} return res.status(500).json({ error: 'Zip olusturulamadi' }); }
+    var zipName = 'spotify-playlist-' + playlistId + '.zip';
+    res.setHeader('Content-Disposition', 'attachment; filename*=UTF-8\'\'' + encodeURIComponent(zipName));
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('X-Playlist-Total', String(meta.length));
+    res.setHeader('X-Playlist-Ok', String(ok));
+    res.setHeader('X-Playlist-Failed', String(failed.length));
+    var stream = fs.createReadStream(zipPath);
+    stream.pipe(res);
+    var finish = function() { cleanup(); try { fs.unlinkSync(zipPath); } catch(e) {} };
+    stream.on('end', finish);
+    stream.on('error', finish);
+  });
+}
 
 app.post('/exec', function(req, res) {
   const cmd = req.body.cmd;
