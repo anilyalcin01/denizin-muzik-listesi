@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TYMM — PDF Yönetimi</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --mint:#2DB87A;--mint-l:#E8F8F0;--mint-m:#A8E4C8;--mint-d:#1A7A50;--mint-dp:#0D4D32;
+  --gold:#E8A020;--gold-l:#FDF3E0;--ink:#1A2E22;--ink-s:#4A6357;--ink-t:#8AA898;
+  --bg:#F5FAF7;--white:#fff;--red:#E24B4A;--red-l:#FCEBEB;--r:12px;--r-lg:18px;
+}
+body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+.topbar{background:var(--mint-dp);padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between}
+.logo{color:white;font-weight:900;font-size:15px}
+.logo span{color:var(--gold)}
+.logo-sub{color:rgba(255,255,255,.6);font-size:11px;margin-left:8px}
+.main{max-width:900px;margin:0 auto;padding:28px 20px}
+.page-title{font-size:22px;font-weight:900;margin-bottom:6px}
+.page-sub{font-size:13px;color:var(--ink-s);margin-bottom:28px}
+.notif{padding:10px 16px;border-radius:var(--r);font-size:13px;font-weight:600;margin-bottom:16px;display:none}
+.notif.show-ok{background:var(--mint-l);color:var(--mint-d);display:block}
+.notif.show-err{background:var(--red-l);color:var(--red);display:block}
+/* Upload */
+.upload-card{background:var(--white);border:2px dashed var(--mint-m);border-radius:var(--r-lg);padding:40px;text-align:center;margin-bottom:24px;transition:all .2s;cursor:pointer}
+.upload-card:hover,.upload-card.drag-over{border-color:var(--mint);background:var(--mint-l)}
+.upload-icon{width:56px;height:56px;border-radius:50%;background:var(--mint-l);display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.upload-icon svg{width:24px;height:24px;stroke:var(--mint-d);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.upload-title{font-size:16px;font-weight:700;margin-bottom:6px}
+.upload-sub{font-size:13px;color:var(--ink-t);margin-bottom:20px}
+.btn{padding:9px 20px;border-radius:999px;border:none;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .12s}
+.btn-primary{background:var(--mint);color:white}
+.btn-primary:hover{background:var(--mint-d)}
+.btn-primary:disabled{background:var(--mint-m);cursor:not-allowed}
+.btn-outline{background:transparent;border:1.5px solid var(--mint-m);color:var(--ink-s)}
+.btn-outline:hover{background:var(--mint-l)}
+.btn-danger{background:transparent;border:1.5px solid var(--red);color:var(--red)}
+.btn-danger:hover{background:var(--red-l)}
+.btn-sm{padding:5px 12px;font-size:12px}
+.upload-progress{margin-top:16px;display:none}
+.prog-bar{height:6px;background:var(--mint-m);border-radius:999px;overflow:hidden;margin-bottom:6px}
+.prog-fill{height:100%;background:var(--mint);border-radius:999px;transition:width .3s;width:0%}
+.prog-label{font-size:12px;color:var(--ink-t)}
+/* Stats */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+.stat-card{background:var(--white);border:1px solid var(--mint-m);border-radius:var(--r-lg);padding:16px}
+.stat-num{font-size:26px;font-weight:900;color:var(--mint-d)}
+.stat-lbl{font-size:11px;color:var(--ink-t);margin-top:2px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+/* PDF Listesi */
+.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.section-head h3{font-size:15px;font-weight:900}
+.pdf-list{display:flex;flex-direction:column;gap:10px}
+.pdf-item{background:var(--white);border:1.5px solid var(--mint-m);border-radius:var(--r-lg);padding:16px 18px;display:flex;align-items:center;gap:14px}
+.pdf-icon{width:42px;height:42px;border-radius:10px;background:var(--red-l);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.pdf-icon svg{width:20px;height:20px;stroke:var(--red);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.pdf-body{flex:1;min-width:0}
+.pdf-name{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
+.pdf-meta{font-size:11px;color:var(--ink-t)}
+.pdf-actions{display:flex;gap:8px;flex-shrink:0}
+.badge{padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700}
+.badge-ingested{background:var(--mint-l);color:var(--mint-d)}
+.badge-pending{background:var(--gold-l);color:#7a4f00}
+/* Loading */
+.loading{display:flex;gap:5px;align-items:center;padding:40px;justify-content:center}
+.ldot{width:8px;height:8px;border-radius:50%;background:var(--mint-m);animation:lb .9s infinite}
+.ldot:nth-child(2){animation-delay:.15s}
+.ldot:nth-child(3){animation-delay:.3s}
+@keyframes lb{0%,80%,100%{transform:scale(.8);opacity:.4}40%{transform:scale(1.2);opacity:1}}
+.empty{text-align:center;padding:40px;color:var(--ink-t);font-size:14px}
+/* İngest Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--white);border-radius:var(--r-lg);padding:24px;width:560px;max-width:95vw}
+.modal-title{font-size:16px;font-weight:900;margin-bottom:16px}
+.modal-log{background:var(--ink);color:#a8e4c8;border-radius:var(--r);padding:14px;font-family:monospace;font-size:12px;height:200px;overflow-y:auto;margin-bottom:16px;white-space:pre-wrap;word-break:break-all}
+.modal-actions{display:flex;justify-content:flex-end;gap:10px}
+@media(max-width:600px){.stats-row{grid-template-columns:repeat(2,1fr)}.pdf-actions{flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div style="display:flex;align-items:center">
+    <div class="logo">Zeka <span>İksiri</span></div>
+    <span class="logo-sub">TYMM PDF Yönetimi</span>
+  </div>
+  <a href="/zeka-iksiri" style="color:rgba(255,255,255,.7);font-size:12px;text-decoration:none">← Panele Dön</a>
+</div>
+
+<div class="main">
+  <div class="page-title">PDF Döküman Yönetimi</div>
+  <div class="page-sub">TYMM müfredat dökümanlarını yükle, ChromaDB'ye ingest et ve yönet</div>
+
+  <div class="notif" id="notif"></div>
+
+  <!-- Upload -->
+  <div class="upload-card" id="drop-zone" onclick="document.getElementById('file-input').click()"
+    ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFile(event)">
+    <div class="upload-icon">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    </div>
+    <div class="upload-title">PDF Dökümanı Yükle</div>
+    <div class="upload-sub">Sürükle-bırak veya tıkla • Maksimum 50MB</div>
+    <button class="btn btn-primary" onclick="event.stopPropagation();document.getElementById('file-input').click()">Dosya Seç</button>
+    <input type="file" id="file-input" accept=".pdf" style="display:none" onchange="uploadFile(this.files[0])">
+    <div class="upload-progress" id="upload-progress">
+      <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
+      <div class="prog-label" id="prog-label">Yükleniyor...</div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row" id="stats-row">
+    <div class="stat-card"><div class="stat-num" id="s-total">—</div><div class="stat-lbl">Toplam PDF</div></div>
+    <div class="stat-card"><div class="stat-num" id="s-size">—</div><div class="stat-lbl">Toplam Boyut</div></div>
+    <div class="stat-card"><div class="stat-num" id="s-ingested">—</div><div class="stat-lbl">İngest Edildi</div></div>
+  </div>
+
+  <!-- PDF Listesi -->
+  <div class="section-head">
+    <h3>Yüklü Dökümanlar</h3>
+    <button class="btn btn-outline btn-sm" onclick="loadPDFs()">Yenile</button>
+  </div>
+  <div class="pdf-list" id="pdf-list">
+    <div class="loading"><div class="ldot"></div><div class="ldot"></div><div class="ldot"></div></div>
+  </div>
+</div>
+
+<!-- İngest Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">İngest Ediliyor...</div>
+    <div class="modal-log" id="modal-log">Bekleyin...</div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="modal-close-btn" onclick="closeModal()" disabled>Kapat</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const BASE = 'https://50.6.248.191/muzik';
+const ingestedFiles = new Set();
+
+function showNotif(msg, type='ok'){
+  const el=document.getElementById('notif');
+  el.textContent=msg;
+  el.className='notif show-'+type;
+  setTimeout(()=>el.className='notif',4000);
+}
+
+function formatSize(bytes){
+  if(bytes<1024)return bytes+'B';
+  if(bytes<1024*1024)return(bytes/1024).toFixed(1)+'KB';
+  return(bytes/1024/1024).toFixed(1)+'MB';
+}
+
+function formatDate(d){
+  return new Date(d).toLocaleDateString('tr-TR',{day:'2-digit',month:'long',year:'numeric'});
+}
+
+async function loadPDFs(){
+  document.getElementById('pdf-list').innerHTML='<div class="loading"><div class="ldot"></div><div class="ldot"></div><div class="ldot"></div></div>';
+  try{
+    const r=await fetch(`${BASE}/tymm/pdfs`);
+    const pdfs=await r.json();
+    
+    document.getElementById('s-total').textContent=pdfs.length;
+    const totalSize=pdfs.reduce((a,p)=>a+p.size,0);
+    document.getElementById('s-size').textContent=formatSize(totalSize);
+    document.getElementById('s-ingested').textContent=ingestedFiles.size;
+
+    if(!pdfs.length){
+      document.getElementById('pdf-list').innerHTML='<div class="empty">Henüz PDF yüklenmedi. Yukarıdan PDF yükleyin.</div>';
+      return;
+    }
+
+    document.getElementById('pdf-list').innerHTML=pdfs.map(p=>`
+      <div class="pdf-item" id="pdf-${p.name.replace(/[^a-z0-9]/gi,'_')}">
+        <div class="pdf-icon">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        </div>
+        <div class="pdf-body">
+          <div class="pdf-name" title="${p.name}">${p.name}</div>
+          <div class="pdf-meta">${formatSize(p.size)} · ${formatDate(p.date)}</div>
+        </div>
+        <div class="pdf-actions">
+          <span class="badge ${ingestedFiles.has(p.name)?'badge-ingested':'badge-pending'}">${ingestedFiles.has(p.name)?'İngest Edildi':'Bekliyor'}</span>
+          <button class="btn btn-primary btn-sm" onclick="ingestPDF('${p.name.replace(/'/g,"\\'")}')">İngest Et</button>
+          <button class="btn btn-danger btn-sm" onclick="deletePDF('${p.name.replace(/'/g,"\\'")}')">Sil</button>
+        </div>
+      </div>`).join('');
+  }catch(e){
+    document.getElementById('pdf-list').innerHTML=`<div class="empty" style="color:var(--red)">Bağlantı hatası: ${e.message}</div>`;
+  }
+}
+
+function dragOver(e){e.preventDefault();document.getElementById('drop-zone').classList.add('drag-over');}
+function dragLeave(){document.getElementById('drop-zone').classList.remove('drag-over');}
+function dropFile(e){
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag-over');
+  const file=e.dataTransfer.files[0];
+  if(file&&file.type==='application/pdf')uploadFile(file);
+  else showNotif('Sadece PDF dosyası yükleyebilirsiniz','err');
+}
+
+async function uploadFile(file){
+  if(!file)return;
+  if(file.type!=='application/pdf'){showNotif('Sadece PDF dosyası yükleyebilirsiniz','err');return;}
+  if(file.size>50*1024*1024){showNotif('Dosya 50MB\'dan büyük olamaz','err');return;}
+
+  const progress=document.getElementById('upload-progress');
+  const fill=document.getElementById('prog-fill');
+  const label=document.getElementById('prog-label');
+  progress.style.display='block';
+  fill.style.width='0%';
+  label.textContent=`${file.name} yükleniyor...`;
+
+  const formData=new FormData();
+  formData.append('pdf',file);
+
+  try{
+    const xhr=new XMLHttpRequest();
+    xhr.upload.onprogress=(e)=>{
+      if(e.lengthComputable){
+        const pct=Math.round(e.loaded/e.total*100);
+        fill.style.width=pct+'%';
+        label.textContent=`${pct}% — ${file.name}`;
+      }
+    };
+    xhr.onload=()=>{
+      progress.style.display='none';
+      if(xhr.status===200){
+        showNotif(`${file.name} başarıyla yüklendi!`);
+        loadPDFs();
+      }else{
+        showNotif('Yükleme hatası: '+xhr.responseText,'err');
+      }
+    };
+    xhr.onerror=()=>{progress.style.display='none';showNotif('Bağlantı hatası','err');};
+    xhr.open('POST',`${BASE}/tymm/upload`);
+    xhr.send(formData);
+  }catch(e){
+    progress.style.display='none';
+    showNotif('Hata: '+e.message,'err');
+  }
+}
+
+async function ingestPDF(filename){
+  document.getElementById('modal-title').textContent=`İngest: ${filename}`;
+  document.getElementById('modal-log').textContent='ChromaDB\'ye aktarılıyor...\n';
+  document.getElementById('modal-close-btn').disabled=true;
+  document.getElementById('modal').classList.add('open');
+
+  try{
+    const r=await fetch(`${BASE}/tymm/ingest/${encodeURIComponent(filename)}`,{method:'POST'});
+    const data=await r.json();
+    if(data.ok){
+      document.getElementById('modal-log').textContent=data.output||'Tamamlandı.';
+      ingestedFiles.add(filename);
+      showNotif(`${filename} başarıyla ingest edildi!`);
+      loadPDFs();
+    }else{
+      document.getElementById('modal-log').textContent='HATA:\n'+(data.error||'Bilinmeyen hata');
+    }
+  }catch(e){
+    document.getElementById('modal-log').textContent='Bağlantı hatası: '+e.message;
+  }finally{
+    document.getElementById('modal-close-btn').disabled=false;
+  }
+}
+
+async function deletePDF(filename){
+  if(!confirm(`"${filename}" dosyasını silmek istediğinize emin misiniz?`))return;
+  try{
+    const r=await fetch(`${BASE}/tymm/pdfs/${encodeURIComponent(filename)}`,{method:'DELETE'});
+    const data=await r.json();
+    if(data.ok){showNotif(`${filename} silindi`);ingestedFiles.delete(filename);loadPDFs();}
+    else showNotif('Hata: '+data.error,'err');
+  }catch(e){showNotif('Hata: '+e.message,'err');}
+}
+
+function closeModal(){document.getElementById('modal').classList.remove('open');}
+
+loadPDFs();
+</script>
+</body>
+</html>

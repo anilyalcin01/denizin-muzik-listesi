@@ -565,3 +565,57 @@ JSON array döndür:
     res.json({ok:true, adet:yeniSorular.length, ids});
   } catch(e){res.status(500).json({error:e.message});}
 });
+
+// ── PDF Upload & TYMM Yönetimi ──
+const multer = require('multer');
+
+const pdfStorage = multer.diskStorage({
+  destination: '/opt/tymm/pdfs/',
+  filename: (req, file, cb) => {
+    const safe = file.originalname.replace(/[^a-zA-Z0-9._\-\s]/g, '_');
+    cb(null, safe);
+  }
+});
+const pdfUpload = multer({
+  storage: pdfStorage,
+  fileFilter: (req, file, cb) => {
+    cb(null, file.mimetype === 'application/pdf');
+  },
+  limits: { fileSize: 50 * 1024 * 1024 }
+});
+
+app.post('/tymm/upload', pdfUpload.single('pdf'), (req, res) => {
+  if(!req.file) return res.status(400).json({error:'PDF değil veya dosya yok'});
+  res.json({ok:true, filename: req.file.filename, size: req.file.size});
+});
+
+app.get('/tymm/pdfs', (req, res) => {
+  const fs = require('fs');
+  try {
+    const files = fs.readdirSync('/opt/tymm/pdfs/').filter(f=>f.endsWith('.pdf'));
+    const list = files.map(f => {
+      const stat = fs.statSync(`/opt/tymm/pdfs/${f}`);
+      return { name: f, size: stat.size, date: stat.mtime };
+    });
+    res.json(list);
+  } catch(e){ res.status(500).json({error:e.message}); }
+});
+
+app.delete('/tymm/pdfs/:filename', (req, res) => {
+  const fs = require('fs');
+  const safe = path.basename(req.params.filename);
+  try {
+    fs.unlinkSync(`/opt/tymm/pdfs/${safe}`);
+    res.json({ok:true});
+  } catch(e){ res.status(500).json({error:e.message}); }
+});
+
+app.post('/tymm/ingest/:filename', (req, res) => {
+  const { exec } = require('child_process');
+  const safe = path.basename(req.params.filename);
+  exec(`python3 /opt/tymm/ingest.py "${safe}"`, (err, stdout, stderr) => {
+    if(err) return res.status(500).json({error:stderr});
+    res.json({ok:true, output: stdout});
+  });
+});
+
