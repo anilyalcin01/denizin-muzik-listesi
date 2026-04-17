@@ -262,6 +262,15 @@ function parseSpotifyPlaylistId(url) {
   } catch(e) { return null; }
 }
 
+function parseSpotifyAlbumId(url) {
+  try {
+    var parsed = new URL(url);
+    var m = parsed.pathname.match(/\/(?:intl-[a-z]{2}\/)?album\/([a-zA-Z0-9]+)/);
+    if (m) return m[1];
+    return null;
+  } catch(e) { return null; }
+}
+
 function downloadIsrcToDir(isrc, ripDir) {
   return new Promise(function(resolve) {
     const https = require('https');
@@ -290,7 +299,11 @@ app.post('/spotify', function(req, res) {
 
   // Playlist URL'si ise: tüm track'leri çek, sırayla indir, zip olarak dön
   var playlistId = parseSpotifyPlaylistId(url);
-  if (playlistId) return handleSpotifyPlaylist(playlistId, res);
+  if (playlistId) return handleSpotifyCollection('playlist', playlistId, res);
+
+  // Album URL'si ise: aynı mantık, album_tracks üzerinden
+  var albumId = parseSpotifyAlbumId(url);
+  if (albumId) return handleSpotifyCollection('album', albumId, res);
 
   const ripDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ripdl-'));
 
@@ -372,30 +385,32 @@ app.post('/spotify', function(req, res) {
   });
 });
 
-async function handleSpotifyPlaylist(playlistId, res) {
-  const ripDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ripdl-pl-'));
+async function handleSpotifyCollection(kind, collectionId, res) {
+  const script = kind === 'album' ? '/opt/muzik/spotify_album.py' : '/opt/muzik/spotify_playlist.py';
+  const prefix = kind === 'album' ? 'ripdl-al-' : 'ripdl-pl-';
+  const ripDir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
   const cleanup = function() { try { fs.rmSync(ripDir, { recursive: true, force: true }); } catch(e) {} };
 
   // Response can be slow (100 tracks * ~20s). Disable socket timeout.
   if (res.setTimeout) res.setTimeout(0);
 
-  // 1) Playlist'teki track'leri ve ISRC'leri al
+  // 1) Collection'daki track'leri ve ISRC'leri al
   var meta;
   try {
     meta = await new Promise(function(resolve, reject) {
-      execFile('python3', ['/opt/muzik/spotify_playlist.py', playlistId], { timeout: 60000, maxBuffer: 8 * 1024 * 1024 }, function(err, stdout, stderr) {
+      execFile('python3', [script, collectionId], { timeout: 60000, maxBuffer: 8 * 1024 * 1024 }, function(err, stdout, stderr) {
         if (err) return reject(new Error(stderr || err.message));
         try { resolve(JSON.parse(stdout.trim())); } catch(e) { reject(e); }
       });
     });
   } catch(e) {
     cleanup();
-    return res.status(500).json({ error: 'Playlist metadata alinamadi', detail: e.message });
+    return res.status(500).json({ error: kind + ' metadata alinamadi', detail: e.message });
   }
 
   if (!Array.isArray(meta) || !meta.length) {
     cleanup();
-    return res.status(404).json({ error: 'Playlist bos veya track bulunamadi' });
+    return res.status(404).json({ error: kind + ' bos veya track bulunamadi' });
   }
 
   // 2) Sırayla her track'i indir (ISRC olmayanları atla)
@@ -421,7 +436,7 @@ async function handleSpotifyPlaylist(playlistId, res) {
   var zipPath = ripDir + '.zip';
   exec('cd "' + ripDir + '" && zip -rq "' + zipPath + '" .', { timeout: 120000 }, function(zErr) {
     if (zErr) { cleanup(); try { fs.unlinkSync(zipPath); } catch(e) {} return res.status(500).json({ error: 'Zip olusturulamadi' }); }
-    var zipName = 'spotify-playlist-' + playlistId + '.zip';
+    var zipName = 'spotify-' + kind + '-' + collectionId + '.zip';
     res.setHeader('Content-Disposition', 'attachment; filename*=UTF-8\'\'' + encodeURIComponent(zipName));
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('X-Playlist-Total', String(meta.length));
