@@ -76,6 +76,16 @@ function deezerSearchAndDownload(searchQuery, fallbackName, ripDir, res) {
   });
 }
 
+// YouTube URL'inden video ID cikaran yardimci
+function extractYouTubeId(url) {
+  if (!url) return '';
+  var m;
+  m = url.match(/[?&]v=([A-Za-z0-9_-]{11})/); if (m) return m[1];
+  m = url.match(/youtu\.be\/([A-Za-z0-9_-]{11})/); if (m) return m[1];
+  m = url.match(/\/(?:shorts|embed|live)\/([A-Za-z0-9_-]{11})/); if (m) return m[1];
+  return '';
+}
+
 // YouTube basligini temizleyip artist + title parse eden yardimci
 function parseYtTitle(rawTitle) {
   var cleanTitle = rawTitle
@@ -103,8 +113,41 @@ app.post('/download', function(req, res) {
     deezerSearchAndDownload(searchQuery, fallbackName, ripDir, res);
   }
 
-  // Fallback zinciri: --get-title -> --print -> spoofed yt-dlp -> HTML scrape
+  // Fallback zinciri: ytsearch1 -> --get-title -> --print -> spoofed yt-dlp -> HTML scrape
   function fallbackSearch() {
+    // Fallback 0: --flat-playlist ytsearch1:<videoId> (bot-detection bypass)
+    // Search endpoint'i player API'yi tetiklemiyor, dolayisiyla "Sign in to confirm" hatasini atliyor
+    var videoId = extractYouTubeId(url);
+    if (!videoId) return legacyFallbacks();
+
+    execFile('yt-dlp', [
+      '--flat-playlist', '--dump-json', 'ytsearch1:' + videoId
+    ], { timeout: 20000, maxBuffer: 1024 * 1024 }, function(err0, stdout0) {
+      var meta0;
+      try { meta0 = JSON.parse(stdout0); } catch(e) { meta0 = null; }
+      if (meta0 && meta0.title) {
+        // Unicode ayirici karakterleri normalize et ki parseYtTitle artist/title'i ayirabilsin
+        var rawTitle = meta0.title
+          .replace(/[–—|·•]/g, ' - ')
+          .replace(/\s{2,}/g, ' ')
+          .trim();
+        var parsed = parseYtTitle(rawTitle);
+        var channel = (meta0.channel || meta0.uploader || '')
+          .replace(/\s*-\s*Topic\s*$/i, '')
+          .replace(/VEVO$/i, '')
+          .replace(/\bOfficial\b/gi, '')
+          .replace(/\s{2,}/g, ' ')
+          .trim();
+        // parseYtTitle " - " uzerinden basariyla ayirdiysa channel gereksiz; ayiramadiysa channel artist olarak kullanilir
+        var artist = parsed.artist || channel;
+        var q = (artist + ' ' + parsed.title).trim();
+        return searchAndDownload(q, parsed.title || rawTitle);
+      }
+      legacyFallbacks();
+    });
+  }
+
+  function legacyFallbacks() {
     // Fallback 1: --get-title
     execFile('yt-dlp', ['--get-title', '--no-playlist', url], { timeout: 15000 }, function(err2, stdout2) {
       var fallbackTitle = (stdout2 || '').trim();

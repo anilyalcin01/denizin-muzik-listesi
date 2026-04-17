@@ -10,3 +10,4 @@ node_modules/
 /tmp/
 *.bak
 .cache
+public/sohbet-yedekleri/

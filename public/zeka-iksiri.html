@@ -184,7 +184,7 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);min-height:100vh;color
         İstatistikler
       </div>
       <div class="nav-item" onclick="window.open('https://50.6.248.191/tymm-panel','_blank')"><svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>PDF Yönetimi</div><div class="nav-sep"></div>
-      <div class="nav-item" onclick="window.open('https://50.6.248.191/soru-kutuphanesi','_blank')"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>Soru Kütüphanesi</div><div class="nav-item" onclick="showView('settings',this)">
+      <div class="nav-item" onclick="window.open('https://50.6.248.191/soru-kutuphanesi','_blank')"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>Soru Kütüphanesi</div><div class="nav-item" id="nav-acik-uclu" onclick="window.open('https://50.6.248.191/acik-uclu-sorular','_blank')" style="display:none"><svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Açık Uçlu Soru Üretme</div><div class="nav-item" onclick="showView('settings',this)">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
         Ayarlar
       </div>
@@ -550,6 +550,17 @@ function renderResult(c){
   const msg=pct>=80?'Harika iş! 🎉':pct>=60?'İyi gidiyorsun!':'Biraz daha pratik yapalım';
   c.innerHTML=`<div class="result-view"><div class="result-circle"><div class="result-score">${qScore}/${questions.length}</div><div class="result-total">%${pct}</div></div><div class="result-msg">${msg}</div><div class="result-sub">Sayılar ve Cebir: ${qScore} doğru, ${questions.length-qScore} yanlış.</div><div class="result-btns"><button class="q-btn q-btn-primary" onclick="startQuiz()">Tekrar Çöz</button><button class="q-btn q-btn-outline" onclick="showView('dashboard',null)">Ana Sayfaya Dön</button></div></div>`;
 }
+</script>
+<script>
+// Admin gating - Açık Uçlu Soru Üretme
+(function() {
+  function checkAdmin() {
+    var role = localStorage.getItem('ziRole') || localStorage.getItem('role') || '';
+    var el = document.getElementById('nav-acik-uclu');
+    if(el) el.style.display = (role === 'admin') ? '' : 'none';
+  }
+  document.addEventListener('DOMContentLoaded', checkAdmin);
+})();
 </script>
 </body>
 </html>

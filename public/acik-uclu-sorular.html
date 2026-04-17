@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Açık Uçlu Soru Modülü — Pro-Me</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+  :root {
+    --purple: #534AB7; --purple-dark: #3C3489; --purple-light: #EEEDFE; --purple-text: #3C3489;
+    --teal: #1D9E75; --teal-light: #E1F5EE; --teal-dark: #085041;
+    --coral: #D85A30; --coral-light: #FAECE7; --coral-text: #714B13;
+    --blue: #378ADD; --blue-light: #E6F1FB; --blue-text: #0C447C;
+    --amber-light: #FAEEDA; --amber-text: #633806;
+    --gray-50: #F8F8F6; --gray-100: #F1EFE8; --gray-200: #D3D1C7;
+    --gray-400: #888780; --gray-600: #5F5E5A; --gray-900: #2C2C2A;
+    --red-light: #FCEBEB; --red-text: #791F1F;
+    --green-light: #EAF3DE; --green-text: #3B6D11;
+    --border: rgba(0,0,0,0.12); --border-med: rgba(0,0,0,0.2);
+    --radius: 8px; --radius-lg: 12px;
+    --font: 'Inter', -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); font-size: 14px; color: var(--gray-900); background: var(--gray-50); min-height: 100vh; }
+
+  /* LAYOUT */
+  .app { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+  .sidebar { background: white; border-right: 0.5px solid var(--border); padding: 0; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+  .main { padding: 2rem; max-width: 860px; }
+
+  /* SIDEBAR */
+  .sb-logo { padding: 1.5rem 1.25rem 1rem; border-bottom: 0.5px solid var(--border); }
+  .sb-logo-title { font-size: 13px; font-weight: 600; color: var(--gray-900); }
+  .sb-logo-sub { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+  .sb-nav { padding: 1rem 0.75rem; flex: 1; }
+  .sb-section { font-size: 10px; font-weight: 600; color: var(--gray-400); text-transform: uppercase; letter-spacing: .06em; padding: 0 0.5rem; margin-bottom: 4px; margin-top: 1rem; }
+  .sb-section:first-child { margin-top: 0; }
+  .sb-btn { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 10px; font-size: 13px; border: none; border-radius: var(--radius); background: transparent; color: var(--gray-600); cursor: pointer; text-align: left; transition: all .15s; }
+  .sb-btn:hover { background: var(--gray-100); color: var(--gray-900); }
+  .sb-btn.on { background: var(--purple-light); color: var(--purple-text); font-weight: 500; }
+  .sb-btn svg { opacity: .6; flex-shrink: 0; }
+  .sb-btn.on svg { opacity: 1; }
+  .sb-stats { margin: 1rem 0.75rem; padding: 0.75rem; background: var(--gray-100); border-radius: var(--radius); }
+  .sb-stat { display: flex; justify-content: space-between; font-size: 12px; color: var(--gray-600); padding: 2px 0; }
+  .sb-stat strong { color: var(--gray-900); font-weight: 600; }
+
+  /* PANELS */
+  .panel { display: none; }
+  .panel.on { display: block; }
+
+  /* PAGE HEADER */
+  .page-header { margin-bottom: 1.75rem; }
+  .page-title { font-size: 20px; font-weight: 600; color: var(--gray-900); }
+  .page-sub { font-size: 13px; color: var(--gray-400); margin-top: 4px; }
+
+  /* FORM SECTIONS */
+  .form-card { background: white; border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1rem; }
+  .form-card-title { font-size: 12px; font-weight: 600; color: var(--gray-900); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; }
+  .fc-tag { font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 20px; text-transform: none; letter-spacing: 0; }
+  .fc-tag-note { background: var(--gray-100); color: var(--gray-400); }
+  .fc-tag-timss { background: var(--blue-light); color: var(--blue-text); }
+  .fc-tag-pirls { background: var(--coral-light); color: var(--coral-text); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { padding: 4px 12px; font-size: 12px; border-radius: 20px; cursor: pointer; border: 0.5px solid var(--border); background: white; color: var(--gray-600); transition: all .15s; user-select: none; }
+  .chip:hover { border-color: var(--border-med); color: var(--gray-900); }
+  .chip.s-ders { background: var(--purple-light); color: var(--purple-text); border-color: var(--purple); }
+  .chip.s-tc { background: var(--teal-light); color: var(--teal-dark); border-color: var(--teal); }
+  .chip.s-psiko { background: var(--blue-light); color: var(--blue-text); border-color: var(--blue); }
+  .chip.s-pp { background: var(--coral-light); color: var(--coral-text); border-color: var(--coral); }
+
+  /* TIMSS COG */
+  .tcog-row { display: flex; gap: 8px; margin-top: 8px; }
+  .tcog-btn { flex: 1; padding: 8px 6px; font-size: 12px; border: 0.5px solid var(--border); border-radius: var(--radius); cursor: pointer; background: white; color: var(--gray-600); text-align: center; transition: all .15s; line-height: 1.4; }
+  .tcog-btn:hover { border-color: var(--teal); }
+  .tcog-btn.on { background: var(--teal-light); color: var(--teal-dark); border-color: var(--teal); font-weight: 500; }
+  .tcog-pct { font-size: 10px; opacity: .7; display: block; margin-top: 2px; }
+
+  /* PIRLS */
+  .pirls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .pcol-lbl { font-size: 11px; color: var(--gray-400); margin-bottom: 6px; }
+  .ppurp-row { display: flex; gap: 6px; }
+  .ppurp-btn { flex: 1; padding: 7px 6px; font-size: 12px; border: 0.5px solid var(--border); border-radius: var(--radius); cursor: pointer; background: white; color: var(--gray-600); text-align: center; transition: all .15s; line-height: 1.4; }
+  .ppurp-btn:hover { border-color: var(--coral); }
+  .ppurp-btn.on { background: var(--coral-light); color: var(--coral-text); border-color: var(--coral); font-weight: 500; }
+  .ppurp-pct { font-size: 10px; opacity: .7; display: block; margin-top: 2px; }
+
+  /* BLOOM */
+  .bloom-bar { display: flex; gap: 4px; }
+  .bs { flex: 1; height: 8px; border-radius: 4px; cursor: pointer; background: var(--gray-100); border: 0.5px solid var(--border); transition: all .15s; }
+  .bs:hover { background: var(--gray-200); }
+  .bs.lit { background: var(--purple); border-color: var(--purple-dark); }
+  .bloom-labels { display: flex; margin-top: 5px; }
+  .bloom-labels span { flex: 1; font-size: 10px; color: var(--gray-400); text-align: center; }
+  .bloom-sel { font-size: 12px; color: var(--gray-600); margin-top: 4px; }
+  .bloom-sel strong { color: var(--gray-900); }
+
+  /* FORM INPUTS */
+  .form-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-group { margin-bottom: 0; }
+  .form-lbl { display: block; font-size: 11px; font-weight: 600; color: var(--gray-600); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+  select, input[type=text] { width: 100%; padding: 8px 10px; font-size: 13px; border: 0.5px solid var(--border); border-radius: var(--radius); background: white; color: var(--gray-900); outline: none; transition: border-color .15s; font-family: var(--font); }
+  select:focus, input[type=text]:focus { border-color: var(--purple); }
+  textarea { width: 100%; padding: 10px 12px; font-size: 13px; line-height: 1.65; resize: vertical; border: 0.5px solid var(--border); border-radius: var(--radius); background: white; color: var(--gray-900); outline: none; transition: border-color .15s; font-family: var(--font); }
+  textarea.mono { font-family: var(--font-mono); font-size: 12px; }
+  textarea:focus { border-color: var(--purple); }
+
+  .prev-lbl { font-size: 11px; color: var(--gray-400); margin-bottom: 4px; margin-top: 8px; }
+  .prev-box { min-height: 52px; padding: 10px 14px; background: var(--gray-50); border: 0.5px solid var(--border); border-radius: var(--radius); font-size: 14px; line-height: 1.85; color: var(--gray-900); }
+
+  /* RUBRIC */
+  .rrows { margin-bottom: 6px; }
+  .rrow { display: flex; gap: 8px; margin-bottom: 6px; align-items: center; }
+  .rrow input:first-child { flex: 1; }
+  .rpt { width: 60px; }
+  .rrem { font-size: 13px; color: var(--gray-400); background: none; border: none; cursor: pointer; padding: 0 4px; transition: color .15s; }
+  .rrem:hover { color: var(--red-text); }
+  .radd { font-size: 12px; color: var(--purple); background: none; border: none; cursor: pointer; padding: 0; font-weight: 500; }
+  .radd:hover { color: var(--purple-dark); }
+
+  /* INFO BOX */
+  .info-box { margin-top: 8px; padding: 8px 12px; border-radius: var(--radius); font-size: 12px; line-height: 1.65; }
+  .info-box-timss { background: var(--teal-light); color: var(--teal-dark); border-left: 2px solid var(--teal); }
+  .info-box-pirls { background: var(--coral-light); color: var(--coral-text); border-left: 2px solid var(--coral); }
+
+  /* SAVE */
+  .save-btn { display: flex; align-items: center; gap: 8px; padding: 9px 20px; background: var(--purple); color: white; border: none; border-radius: var(--radius); font-size: 14px; font-weight: 500; cursor: pointer; margin-top: 1.5rem; transition: background .15s; font-family: var(--font); }
+  .save-btn:hover { background: var(--purple-dark); }
+
+  /* LIBRARY */
+  .lib-toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1.25rem; align-items: center; }
+  .fp { padding: 5px 12px; font-size: 12px; border-radius: 20px; border: 0.5px solid var(--border); background: white; color: var(--gray-600); cursor: pointer; transition: all .15s; }
+  .fp:hover { border-color: var(--border-med); }
+  .fp.on { background: var(--purple-light); color: var(--purple-text); border-color: var(--purple); font-weight: 500; }
+  .lib-count { font-size: 12px; color: var(--gray-400); margin-left: auto; }
+
+  .qcard { background: white; border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.125rem 1.25rem; margin-bottom: 10px; cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+  .qcard:hover { border-color: var(--border-med); box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .qcard.open { border-color: var(--purple); }
+  .qcard-head { display: flex; gap: 10px; align-items: flex-start; }
+  .qn { font-size: 11px; color: var(--gray-400); min-width: 20px; padding-top: 3px; }
+  .qb { flex: 1; }
+  .qtxt { font-size: 14px; line-height: 1.75; color: var(--gray-900); }
+  .qmeta { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 10px; align-items: center; }
+  .badge { padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+  .b-ders { background: var(--purple-light); color: var(--purple-text); }
+  .b-bloom { background: var(--gray-100); color: var(--gray-600); }
+  .b-psiko { background: var(--blue-light); color: var(--blue-text); }
+  .b-tc { background: var(--teal-light); color: var(--teal-dark); }
+  .b-tg { background: #9FE1CB; color: #04342C; }
+  .b-pp { background: var(--coral-light); color: var(--coral-text); }
+  .b-pc { background: #F5C4B3; color: #4A1B0C; }
+  .b-diff-kolay { background: var(--green-light); color: var(--green-text); }
+  .b-diff-orta { background: var(--amber-light); color: var(--amber-text); }
+  .b-diff-zor { background: var(--red-light); color: var(--red-text); }
+  .b-pts { background: var(--gray-100); color: var(--gray-600); margin-left: auto; }
+
+  .qdtl { display: none; margin-top: 12px; padding-top: 12px; border-top: 0.5px solid var(--border); }
+  .qcard.open .qdtl { display: block; }
+  .dtlh { font-size: 11px; font-weight: 600; color: var(--gray-400); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .05em; }
+  .rtable { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .rtable td { padding: 5px 0; border-bottom: 0.5px solid var(--border); vertical-align: top; }
+  .rtable td:last-child { text-align: right; color: var(--gray-400); padding-left: 12px; white-space: nowrap; }
+  .rtable tr:last-child td { border-bottom: none; }
+  .hint-box { margin-top: 10px; padding: 8px 12px; background: var(--blue-light); border-radius: var(--radius); font-size: 13px; color: #185FA5; line-height: 1.65; }
+
+  /* SCHEMA TAB */
+  .schema-card { background: white; border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.125rem 1.25rem; margin-bottom: 10px; }
+  .schema-card.timss-border { border-left: 3px solid var(--teal); }
+  .schema-card.pirls-border { border-left: 3px solid var(--coral); }
+  .schema-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .schema-num { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; }
+  .schema-title { font-size: 14px; font-weight: 600; }
+  .schema-meta { font-size: 12px; color: var(--gray-400); margin-left: auto; }
+  .schema-vals { font-size: 12px; color: var(--gray-600); line-height: 1.7; }
+  .schema-col { font-family: var(--font-mono); font-size: 11px; color: var(--gray-400); margin-top: 6px; }
+  .sql-block { background: var(--gray-50); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; font-family: var(--font-mono); font-size: 12px; line-height: 2; color: var(--gray-600); margin-top: 1rem; }
+  .sql-kw { color: var(--purple); font-weight: 600; }
+  .sql-type { color: var(--teal-dark); }
+  .sql-comment { color: var(--gray-400); font-style: italic; }
+
+  .empty-state { text-align: center; padding: 3rem; color: var(--gray-400); font-size: 13px; }
+
+  /* AI GENERATE */
+  .ai-banner { background: linear-gradient(135deg, #534AB7 0%, #7C3AED 100%); border-radius: var(--radius-lg); padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; color: white; display: flex; align-items: center; gap: 1rem; }
+  .ai-banner-icon { width: 40px; height: 40px; background: rgba(255,255,255,.15); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .ai-banner-title { font-size: 15px; font-weight: 600; }
+  .ai-banner-sub { font-size: 12px; opacity: .8; margin-top: 2px; }
+  .ai-gen-form { background: white; border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1rem; }
+  .ai-gen-form-title { font-size: 12px; font-weight: 600; color: var(--gray-600); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 1rem; }
+  .ai-topic-input { width: 100%; padding: 10px 12px; font-size: 14px; border: 0.5px solid var(--border); border-radius: var(--radius); background: white; color: var(--gray-900); outline: none; font-family: var(--font); margin-bottom: 12px; }
+  .ai-topic-input:focus { border-color: var(--purple); }
+  .ai-gen-btn { display: flex; align-items: center; gap: 8px; padding: 10px 20px; background: var(--purple); color: white; border: none; border-radius: var(--radius); font-size: 14px; font-weight: 500; cursor: pointer; font-family: var(--font); transition: background .15s; }
+  .ai-gen-btn:hover { background: var(--purple-dark); }
+  .ai-gen-btn:disabled { opacity: .5; cursor: not-allowed; }
+  .ai-spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3); border-top-color: white; border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .ai-preview-card { background: white; border: 2px solid var(--purple); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1rem; position: relative; }
+  .ai-preview-label { position: absolute; top: -10px; left: 14px; background: var(--purple); color: white; font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: 20px; }
+  .ai-preview-text { font-size: 14px; line-height: 1.8; color: var(--gray-900); margin-bottom: 12px; }
+  .ai-preview-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 14px; }
+  .ai-preview-rubric { font-size: 13px; }
+  .ai-preview-rubric-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 0.5px solid var(--border); }
+  .ai-preview-rubric-row:last-child { border-bottom: none; }
+  .ai-action-row { display: flex; gap: 10px; margin-top: 14px; }
+  .ai-accept-btn { flex: 1; padding: 9px; background: var(--purple); color: white; border: none; border-radius: var(--radius); font-size: 13px; font-weight: 500; cursor: pointer; font-family: var(--font); transition: background .15s; }
+  .ai-accept-btn:hover { background: var(--purple-dark); }
+  .ai-regen-btn { padding: 9px 16px; background: white; color: var(--gray-600); border: 0.5px solid var(--border); border-radius: var(--radius); font-size: 13px; cursor: pointer; font-family: var(--font); transition: all .15s; }
+  .ai-regen-btn:hover { border-color: var(--purple); color: var(--purple); }
+  .ai-edit-btn { padding: 9px 16px; background: white; color: var(--gray-600); border: 0.5px solid var(--border); border-radius: var(--radius); font-size: 13px; cursor: pointer; font-family: var(--font); transition: all .15s; }
+  .ai-edit-btn:hover { border-color: var(--teal); color: var(--teal-dark); }
+  .ai-error { background: var(--red-light); color: var(--red-text); padding: 10px 14px; border-radius: var(--radius); font-size: 13px; margin-top: 10px; }
+  .ai-fill-btn { display: flex; align-items: center; gap: 6px; padding: 7px 14px; background: var(--purple-light); color: var(--purple-text); border: 0.5px solid var(--purple); border-radius: var(--radius); font-size: 12px; font-weight: 500; cursor: pointer; font-family: var(--font); transition: all .15s; margin-left: auto; }
+  .ai-fill-btn:hover { background: var(--purple); color: white; }
+  .count-chip { display: inline-block; background: var(--purple-light); color: var(--purple-text); border-radius: 20px; padding: 2px 8px; font-size: 11px; font-weight: 600; margin-left: 6px; }
+
+  @media (max-width: 700px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { position: static; height: auto; flex-direction: row; flex-wrap: wrap; }
+    .pirls-grid, .form-row2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-title">Pro-Me AI</div>
+    <div class="sb-logo-sub">Soru Modülü — Prototype v5</div>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-section">Editör</div>
+    <button class="sb-btn" onclick="go('aigen',this)" style="background:var(--purple-light);color:var(--purple-text);font-weight:500">
+      <svg width="14" height="14" fill="none" viewBox="0 0 16 16"><path d="M8 2c3.3 0 6 2.7 6 6s-2.7 6-6 6-6-2.7-6-6 2.7-6 6-6z" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 8.5l1.5 1.5 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      AI ile Üret
+    </button>
+    <button class="sb-btn" onclick="go('create',this)">
+      <svg width="14" height="14" fill="none" viewBox="0 0 16 16"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      Manuel Oluştur
+    </button>
+    <div class="sb-section">Kütüphane</div>
+    <button class="sb-btn" onclick="go('read',this)">
+      <svg width="14" height="14" fill="none" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Tüm Sorular
+    </button>
+    <div class="sb-section">Referans</div>
+    <button class="sb-btn" onclick="go('schema',this)">
+      <svg width="14" height="14" fill="none" viewBox="0 0 16 16"><path d="M2 4h12M2 8h12M2 12h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      qcat Şeması
+    </button>
+  </nav>
+  <div class="sb-stats" id="sb-stats">
+    <div class="sb-stat">Toplam soru <strong id="stat-total">3</strong></div>
+    <div class="sb-stat">Matematik <strong id="stat-mat">2</strong></div>
+    <div class="sb-stat">Fen <strong id="stat-fen">1</strong></div>
+    <div class="sb-stat">Türkçe <strong id="stat-turk">1</strong></div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- AI GENERATE -->
+  <div class="panel on" id="p-aigen">
+    <div class="page-header">
+      <div class="page-title">AI ile Soru Üret</div>
+      <div class="page-sub">Konu ve parametreleri belirtin — Claude soruyu, rubriği ve tüm qcat etiketlerini otomatik oluştursun</div>
+    </div>
+
+    <div class="ai-gen-form">
+      <div class="ai-gen-form-title">Temel Parametreler</div>
+      <div class="form-row2" style="margin-bottom:12px">
+        <div class="form-group"><label class="form-lbl">Ders</label>
+          <select id="ai-ders">
+            <option value="Matematik">Matematik</option>
+            <option value="Fizik">Fizik</option>
+            <option value="Kimya">Kimya</option>
+            <option value="Biyoloji">Biyoloji</option>
+            <option value="Yerbilimleri">Yerbilimleri</option>
+            <option value="Türkçe">Türkçe</option>
+            <option value="Sosyal Bilgiler">Sosyal Bilgiler</option>
+            <option value="İngilizce">İngilizce</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-lbl">Sınıf</label>
+          <select id="ai-grade">
+            <option value="4">4. Sınıf</option>
+            <option value="8" selected>8. Sınıf</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row2" style="margin-bottom:12px">
+        <div class="form-group"><label class="form-lbl">Zorluk</label>
+          <select id="ai-diff">
+            <option value="kolay">Kolay</option>
+            <option value="orta" selected>Orta</option>
+            <option value="zor">Zor</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-lbl">Puan</label>
+          <input type="text" id="ai-pts" value="10">
+        </div>
+      </div>
+      <label class="form-lbl">Konu / Bağlam <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray-400)">opsiyonel — boş bırakırsanız Claude seçer</span></label>
+      <input type="text" id="ai-topic" class="ai-topic-input" placeholder="Örn: Doğrusal denklemler, Fotosentez, Osmanlı dönemi, Ses dalgaları…">
+    </div>
+
+    <div class="ai-gen-form">
+      <div class="ai-gen-form-title">TIMSS 2023 <span class="fc-tag fc-tag-timss" style="font-size:10px;padding:2px 8px;border-radius:10px">opsiyonel — seçmezseniz Claude atar</span></div>
+      <div class="form-row2" style="margin-bottom:10px">
+        <div>
+          <div class="pcol-lbl">İçerik Alanı</div>
+          <div class="chips" id="ai-tc-chips">
+            <span class="chip" data-dim="ai-tc" data-v="Sayı" onclick="aiTog(this)">Sayı</span>
+            <span class="chip" data-dim="ai-tc" data-v="Cebir" onclick="aiTog(this)">Cebir</span>
+            <span class="chip" data-dim="ai-tc" data-v="Geometri" onclick="aiTog(this)">Geometri</span>
+            <span class="chip" data-dim="ai-tc" data-v="Veri & Olasılık" onclick="aiTog(this)">Veri & Olasılık</span>
+            <span class="chip" data-dim="ai-tc" data-v="Biyoloji" onclick="aiTog(this)">Biyoloji</span>
+            <span class="chip" data-dim="ai-tc" data-v="Kimya (Fen)" onclick="aiTog(this)">Kimya (Fen)</span>
+            <span class="chip" data-dim="ai-tc" data-v="Fizik (Fen)" onclick="aiTog(this)">Fizik (Fen)</span>
+            <span class="chip" data-dim="ai-tc" data-v="Yerbilimleri" onclick="aiTog(this)">Yerbilimleri</span>
+          </div>
+        </div>
+        <div>
+          <div class="pcol-lbl">Bilişsel Alan</div>
+          <div class="tcog-row">
+            <button class="tcog-btn" data-cog="Knowing" onclick="setAiCog(this)">Knowing<span class="tcog-pct">%35</span></button>
+            <button class="tcog-btn on" data-cog="Applying" onclick="setAiCog(this)">Applying<span class="tcog-pct">%40</span></button>
+            <button class="tcog-btn" data-cog="Reasoning" onclick="setAiCog(this)">Reasoning<span class="tcog-pct">%25</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ai-gen-form">
+      <div class="ai-gen-form-title">PIRLS 2021 <span class="fc-tag fc-tag-pirls" style="font-size:10px;padding:2px 8px;border-radius:10px">sadece dil/okuma soruları</span></div>
+      <div class="pirls-grid">
+        <div>
+          <div class="pcol-lbl">Okuma Amacı</div>
+          <div style="display:flex;gap:6px">
+            <button class="ppurp-btn" data-p="Literary" onclick="setAiPurpose(this)">Edebi<span class="ppurp-pct">%50</span></button>
+            <button class="ppurp-btn" data-p="Informational" onclick="setAiPurpose(this)">Bilgilendirici<span class="ppurp-pct">%50</span></button>
+            <button class="ppurp-btn" data-p="N/A" onclick="setAiPurpose(this)" style="font-size:11px;flex:0.6">Yok</button>
+          </div>
+        </div>
+        <div>
+          <div class="pcol-lbl">Anlama Süreci</div>
+          <div class="chips">
+            <span class="chip" data-dim="ai-pp" data-v="Retrieve" onclick="aiTog(this)">Retrieve <span style="font-size:10px;opacity:.6">%20</span></span>
+            <span class="chip" data-dim="ai-pp" data-v="Infer" onclick="aiTog(this)">Infer <span style="font-size:10px;opacity:.6">%30</span></span>
+            <span class="chip" data-dim="ai-pp" data-v="Interpret" onclick="aiTog(this)">Interpret <span style="font-size:10px;opacity:.6">%30</span></span>
+            <span class="chip" data-dim="ai-pp" data-v="Evaluate" onclick="aiTog(this)">Evaluate <span style="font-size:10px;opacity:.6">%20</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ai-gen-form">
+      <div class="ai-gen-form-title">Bloom Taksonomisi <span class="fc-tag fc-tag-note" style="font-size:10px;padding:2px 8px;border-radius:10px">opsiyonel</span></div>
+      <div class="bloom-bar" id="ai-bloom-bar">
+        <div class="bs" data-b="0" onclick="setAiBloom(0)"></div>
+        <div class="bs" data-b="1" onclick="setAiBloom(1)"></div>
+        <div class="bs" data-b="2" onclick="setAiBloom(2)"></div>
+        <div class="bs" data-b="3" onclick="setAiBloom(3)"></div>
+        <div class="bs" data-b="4" onclick="setAiBloom(4)"></div>
+        <div class="bs" data-b="5" onclick="setAiBloom(5)"></div>
+      </div>
+      <div class="bloom-labels">
+        <span>Hatırla</span><span>Anla</span><span>Uygula</span><span>Analiz</span><span>Değerlendir</span><span>Yarat</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">
+        <div class="bloom-sel" id="ai-bloom-sel">Seçilmedi — Claude karar verir</div>
+        <button onclick="clearAiBloom()" style="font-size:11px;color:var(--gray-400);background:none;border:none;cursor:pointer;padding:0">Temizle</button>
+      </div>
+    </div>
+
+    <div class="ai-gen-form">
+      <div class="ai-gen-form-title">Psikometrik Boyut <span class="fc-tag fc-tag-note" style="font-size:10px;padding:2px 8px;border-radius:10px">opsiyonel</span></div>
+      <div class="chips">
+        <span class="chip" data-dim="ai-psiko" data-v="Analitik Düşünme" onclick="aiTog(this)">Analitik Düşünme</span>
+        <span class="chip" data-dim="ai-psiko" data-v="Sözel Muhakeme" onclick="aiTog(this)">Sözel Muhakeme</span>
+        <span class="chip" data-dim="ai-psiko" data-v="Sayısal Muhakeme" onclick="aiTog(this)">Sayısal Muhakeme</span>
+        <span class="chip" data-dim="ai-psiko" data-v="Problem Çözme" onclick="aiTog(this)">Problem Çözme</span>
+        <span class="chip" data-dim="ai-psiko" data-v="Uzamsal Düşünme" onclick="aiTog(this)">Uzamsal Düşünme</span>
+        <span class="chip" data-dim="ai-psiko" data-v="Bilimsel Sorgulama" onclick="aiTog(this)">Bilimsel Sorgulama</span>
+        <span class="chip" data-dim="ai-psiko" data-v="Eleştirel Düşünce" onclick="aiTog(this)">Eleştirel Düşünce</span>
+        <span class="chip" data-dim="ai-psiko" data-v="Yaratıcılık" onclick="aiTog(this)">Yaratıcılık</span>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:1rem">
+      <button class="ai-gen-btn" id="ai-gen-btn" onclick="generateQ()">
+        <svg width="14" height="14" fill="none" viewBox="0 0 16 16"><path d="M13 3L6 10l-3-3" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Soru Üret
+      </button>
+      <span style="font-size:12px;color:var(--gray-400)">Proxy → Claude Sonnet · ~3-5 sn</span>
+    </div>
+    <div id="ai-error" class="ai-error" style="display:none"></div>
+
+    <div id="ai-preview-wrap" style="display:none">
+      <div class="ai-preview-card">
+        <div class="ai-preview-label">AI Taslak — Onaylayın veya düzenleyin</div>
+        <div class="ai-preview-text" id="ai-prev-text"></div>
+        <div class="ai-preview-tags" id="ai-prev-tags"></div>
+        <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Rubrik</div>
+        <div class="ai-preview-rubric" id="ai-prev-rubric"></div>
+        <div id="ai-prev-hint-wrap" style="margin-top:10px;display:none">
+          <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">İpucu</div>
+          <div id="ai-prev-hint" style="font-size:13px;color:#185FA5;background:var(--blue-light);padding:8px 12px;border-radius:var(--radius)"></div>
+        </div>
+        <div class="ai-action-row">
+          <button class="ai-accept-btn" onclick="acceptAI()">
+            ✓ Kütüphaneye Kaydet
+          </button>
+          <button class="ai-edit-btn" onclick="editAI()">
+            ✎ Düzenleyerek Kaydet
+          </button>
+          <button class="ai-regen-btn" onclick="generateQ()">
+            ↻ Yeniden Üret
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="ai-history-wrap" style="display:none">
+      <div style="font-size:12px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">
+        Bu Oturumda Üretilen <span class="count-chip" id="ai-hist-count">0</span>
+      </div>
+      <div id="ai-history-list"></div>
+    </div>
+  </div>
+
+  <!-- CREATE -->
+  <div class="panel" id="p-create">
+    <div class="page-header">
+      <div class="page-title">Soru Oluştur</div>
+      <div class="page-sub">Açık uçlu soru oluşturun ve çok boyutlu qcat etiketlerini atayın</div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">Ders Kategorisi <span class="fc-tag fc-tag-note">çoklu seçim</span></div>
+      <div class="chips">
+        <span class="chip" data-dim="ders" data-v="Matematik" onclick="tog(this)">Matematik</span>
+        <span class="chip" data-dim="ders" data-v="Fizik" onclick="tog(this)">Fizik</span>
+        <span class="chip" data-dim="ders" data-v="Kimya" onclick="tog(this)">Kimya</span>
+        <span class="chip" data-dim="ders" data-v="Biyoloji" onclick="tog(this)">Biyoloji</span>
+        <span class="chip" data-dim="ders" data-v="Yerbilimleri" onclick="tog(this)">Yerbilimleri</span>
+        <span class="chip" data-dim="ders" data-v="Türkçe" onclick="tog(this)">Türkçe</span>
+        <span class="chip" data-dim="ders" data-v="Sosyal Bilgiler" onclick="tog(this)">Sosyal Bilgiler</span>
+        <span class="chip" data-dim="ders" data-v="İngilizce" onclick="tog(this)">İngilizce</span>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">TIMSS 2023 <span class="fc-tag fc-tag-timss">Matematik &amp; Fen Bilimleri</span></div>
+      <div class="form-row2">
+        <div>
+          <div class="pcol-lbl">İçerik Alanı (Content Domain)</div>
+          <div class="chips">
+            <span class="chip" data-dim="tc" data-v="Sayı" onclick="tog(this)">Sayı</span>
+            <span class="chip" data-dim="tc" data-v="Cebir" onclick="tog(this)">Cebir</span>
+            <span class="chip" data-dim="tc" data-v="Geometri" onclick="tog(this)">Geometri</span>
+            <span class="chip" data-dim="tc" data-v="Veri &amp; Olasılık" onclick="tog(this)">Veri &amp; Olasılık</span>
+            <span class="chip" data-dim="tc" data-v="Biyoloji" onclick="tog(this)">Biyoloji</span>
+            <span class="chip" data-dim="tc" data-v="Kimya (Fen)" onclick="tog(this)">Kimya (Fen)</span>
+            <span class="chip" data-dim="tc" data-v="Fizik (Fen)" onclick="tog(this)">Fizik (Fen)</span>
+            <span class="chip" data-dim="tc" data-v="Yerbilimleri" onclick="tog(this)">Yerbilimleri</span>
+          </div>
+        </div>
+        <div>
+          <div class="pcol-lbl">Bilişsel Alan (Cognitive Domain)</div>
+          <div class="tcog-row">
+            <button class="tcog-btn" data-cog="Knowing" onclick="setCog(this)">Knowing<span class="tcog-pct">Bilgi · %35</span></button>
+            <button class="tcog-btn" data-cog="Applying" onclick="setCog(this)">Applying<span class="tcog-pct">Uygulama · %40</span></button>
+            <button class="tcog-btn" data-cog="Reasoning" onclick="setCog(this)">Reasoning<span class="tcog-pct">Muhakeme · %25</span></button>
+          </div>
+          <div id="cog-info" class="info-box info-box-timss" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">PIRLS 2021 <span class="fc-tag fc-tag-pirls">Okuma Yeterliliği</span> <span class="fc-tag fc-tag-note">dil/okuma soruları için</span></div>
+      <div class="pirls-grid">
+        <div>
+          <div class="pcol-lbl">Okuma Amacı (Reading Purpose)</div>
+          <div class="ppurp-row">
+            <button class="ppurp-btn" data-p="Literary" onclick="setPurpose(this)">Edebi<span class="ppurp-pct">%50</span></button>
+            <button class="ppurp-btn" data-p="Informational" onclick="setPurpose(this)">Bilgilendirici<span class="ppurp-pct">%50</span></button>
+            <button class="ppurp-btn" data-p="N/A" onclick="setPurpose(this)" style="font-size:11px;flex:0.6">Yok</button>
+          </div>
+        </div>
+        <div>
+          <div class="pcol-lbl">Anlama Süreci (Comprehension Process)</div>
+          <div class="chips">
+            <span class="chip" data-dim="pp" data-v="Retrieve" onclick="togPirls(this)">Retrieve <span style="font-size:10px;opacity:.6">%20</span></span>
+            <span class="chip" data-dim="pp" data-v="Infer" onclick="togPirls(this)">Infer <span style="font-size:10px;opacity:.6">%30</span></span>
+            <span class="chip" data-dim="pp" data-v="Interpret" onclick="togPirls(this)">Interpret <span style="font-size:10px;opacity:.6">%30</span></span>
+            <span class="chip" data-dim="pp" data-v="Evaluate" onclick="togPirls(this)">Evaluate <span style="font-size:10px;opacity:.6">%20</span></span>
+          </div>
+        </div>
+      </div>
+      <div id="pirls-info" class="info-box info-box-pirls" style="display:none;margin-top:8px"></div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">Bloom Taksonomisi <span class="fc-tag fc-tag-note">tek seçim · zorunlu</span></div>
+      <div class="bloom-bar">
+        <div class="bs" data-b="0" onclick="setBloom(0)"></div>
+        <div class="bs" data-b="1" onclick="setBloom(1)"></div>
+        <div class="bs" data-b="2" onclick="setBloom(2)"></div>
+        <div class="bs" data-b="3" onclick="setBloom(3)"></div>
+        <div class="bs" data-b="4" onclick="setBloom(4)"></div>
+        <div class="bs" data-b="5" onclick="setBloom(5)"></div>
+      </div>
+      <div class="bloom-labels">
+        <span>Hatırla</span><span>Anla</span><span>Uygula</span><span>Analiz</span><span>Değerlendir</span><span>Yarat</span>
+      </div>
+      <div class="bloom-sel" id="bloom-sel">Seçilmedi</div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">Psikometrik Boyut <span class="fc-tag fc-tag-note">çoklu seçim</span></div>
+      <div class="chips">
+        <span class="chip" data-dim="psiko" data-v="Analitik Düşünme" onclick="tog(this)">Analitik Düşünme</span>
+        <span class="chip" data-dim="psiko" data-v="Sözel Muhakeme" onclick="tog(this)">Sözel Muhakeme</span>
+        <span class="chip" data-dim="psiko" data-v="Sayısal Muhakeme" onclick="tog(this)">Sayısal Muhakeme</span>
+        <span class="chip" data-dim="psiko" data-v="Problem Çözme" onclick="tog(this)">Problem Çözme</span>
+        <span class="chip" data-dim="psiko" data-v="Uzamsal Düşünme" onclick="tog(this)">Uzamsal Düşünme</span>
+        <span class="chip" data-dim="psiko" data-v="Bilimsel Sorgulama" onclick="tog(this)">Bilimsel Sorgulama</span>
+        <span class="chip" data-dim="psiko" data-v="Eleştirel Düşünce" onclick="tog(this)">Eleştirel Düşünce</span>
+        <span class="chip" data-dim="psiko" data-v="Yaratıcılık" onclick="tog(this)">Yaratıcılık</span>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">Soru Detayları</div>
+      <div class="form-row2" style="margin-bottom:12px">
+        <div class="form-group"><label class="form-lbl">Sınıf Seviyesi</label>
+          <select id="d-grade"><option value="4">4. Sınıf</option><option value="8" selected>8. Sınıf</option></select></div>
+        <div class="form-group"><label class="form-lbl">Zorluk</label>
+          <select id="d-diff"><option value="kolay">Kolay</option><option value="orta" selected>Orta</option><option value="zor">Zor</option></select></div>
+      </div>
+      <div class="form-row2">
+        <div class="form-group"><label class="form-lbl">Puan</label><input type="text" id="d-pts" value="10"></div>
+        <div class="form-group"><label class="form-lbl">Süre (dk)</label><input type="text" id="d-time" value="5"></div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">Soru Metni <span class="fc-tag fc-tag-note">LaTeX: \( ... \) veya $$ ... $$</span></div>
+      <textarea class="mono" id="d-qtext" rows="5" placeholder="Soru metnini yazın. LaTeX formül desteklenir.&#10;Örn: Bir cisim \(v_0 = 5 \text{ m/s}\) ile fırlatılıyor..." oninput="renderPrev()"></textarea>
+      <div class="prev-lbl">Önizleme</div>
+      <div class="prev-box" id="d-prev"><span style="color:#888">Yazmaya başlayın…</span></div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">Değerlendirme Rubriği</div>
+      <div class="rrows" id="rrows">
+        <div class="rrow"><input type="text" placeholder="Kriter / beklenen yanıt…"><input type="text" class="rpt" placeholder="pt" value="5"><button class="rrem" onclick="delR(this)">✕</button></div>
+        <div class="rrow"><input type="text" placeholder="Kriter / beklenen yanıt…"><input type="text" class="rpt" placeholder="pt" value="5"><button class="rrem" onclick="delR(this)">✕</button></div>
+      </div>
+      <button class="radd" onclick="addR()">+ kriter ekle</button>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">İpucu <span class="fc-tag fc-tag-note">opsiyonel</span></div>
+      <textarea id="d-hint" rows="2" placeholder="Öğrenciye yönlendirme ipucu…"></textarea>
+    </div>
+
+    <button class="save-btn" onclick="saveQ()">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Kütüphaneye Kaydet
+    </button>
+  </div>
+
+  <!-- READ -->
+  <div class="panel" id="p-read">
+    <div class="page-header">
+      <div class="page-title">Soru Kütüphanesi</div>
+      <div class="page-sub">Tüm sorular ve qcat etiketleri</div>
+    </div>
+    <div class="lib-toolbar">
+      <span class="fp on" data-f="all" onclick="setF(this)">Tümü</span>
+      <span class="fp" data-f="tc:Fizik (Fen)" onclick="setF(this)">TIMSS: Fizik</span>
+      <span class="fp" data-f="tc:Cebir" onclick="setF(this)">TIMSS: Cebir</span>
+      <span class="fp" data-f="cog:Reasoning" onclick="setF(this)">Reasoning</span>
+      <span class="fp" data-f="cog:Applying" onclick="setF(this)">Applying</span>
+      <span class="fp" data-f="pirls:Literary" onclick="setF(this)">PIRLS: Edebi</span>
+      <span class="fp" data-f="pp:Evaluate" onclick="setF(this)">PIRLS: Evaluate</span>
+      <span class="fp" data-f="bloom:Analiz" onclick="setF(this)">Bloom: Analiz</span>
+      <span class="lib-count" id="lib-count"></span>
+    </div>
+    <div id="qlist"></div>
+  </div>
+
+  <!-- SCHEMA -->
+  <div class="panel" id="p-schema">
+    <div class="page-header">
+      <div class="page-title">qcat Şeması</div>
+      <div class="page-sub">6 eksenli sınıflandırma yapısı ve PostgreSQL şeması</div>
+    </div>
+
+    <div class="schema-card">
+      <div class="schema-header">
+        <span class="schema-num" style="background:var(--purple-light);color:var(--purple-text)">Eksen 1</span>
+        <span class="schema-title">Ders Kategorisi</span>
+        <span class="schema-meta">çoklu · müfredat</span>
+      </div>
+      <div class="schema-vals">Matematik · Fizik · Kimya · Biyoloji · Yerbilimleri · Türkçe · Sosyal Bilgiler · İngilizce</div>
+      <div class="schema-col">ders_cats TEXT[]</div>
+    </div>
+
+    <div class="schema-card timss-border">
+      <div class="schema-header">
+        <span class="schema-num" style="background:var(--teal-light);color:var(--teal-dark)">Eksen 2</span>
+        <span class="schema-title">TIMSS İçerik Alanı</span>
+        <span class="schema-meta">çoklu · TIMSS 2023</span>
+      </div>
+      <div class="schema-vals"><strong>Matematik:</strong> Sayı · Cebir · Geometri · Veri &amp; Olasılık &nbsp;|&nbsp; <strong>Fen:</strong> Biyoloji · Kimya · Fizik · Yerbilimleri</div>
+      <div class="schema-col">timss_content TEXT[]</div>
+    </div>
+
+    <div class="schema-card timss-border">
+      <div class="schema-header">
+        <span class="schema-num" style="background:#9FE1CB;color:#04342C">Eksen 3</span>
+        <span class="schema-title">TIMSS Bilişsel Alan</span>
+        <span class="schema-meta">tek · TIMSS 2023</span>
+      </div>
+      <div class="schema-vals">Knowing (%35) · Applying (%40) · Reasoning (%25)</div>
+      <div class="schema-col">timss_cognitive VARCHAR(20)</div>
+    </div>
+
+    <div class="schema-card pirls-border">
+      <div class="schema-header">
+        <span class="schema-num" style="background:var(--coral-light);color:var(--coral-text)">Eksen 4</span>
+        <span class="schema-title">PIRLS Okuma Amacı</span>
+        <span class="schema-meta">opsiyonel · PIRLS 2021</span>
+      </div>
+      <div class="schema-vals">Literary · Informational &nbsp;|&nbsp; Eşit ağırlık (%50 — %50)</div>
+      <div class="schema-col">pirls_purpose VARCHAR(20) — NULL olabilir</div>
+    </div>
+
+    <div class="schema-card pirls-border">
+      <div class="schema-header">
+        <span class="schema-num" style="background:#F5C4B3;color:#4A1B0C">Eksen 5</span>
+        <span class="schema-title">PIRLS Anlama Süreci</span>
+        <span class="schema-meta">çoklu · PIRLS 2021</span>
+      </div>
+      <div class="schema-vals">Retrieve (%20) · Infer (%30) · Interpret (%30) · Evaluate (%20)</div>
+      <div class="schema-col">pirls_processes TEXT[] — NULL olabilir</div>
+    </div>
+
+    <div class="schema-card">
+      <div class="schema-header">
+        <span class="schema-num" style="background:var(--gray-100);color:var(--gray-600)">Eksen 6</span>
+        <span class="schema-title">Bloom Taksonomisi</span>
+        <span class="schema-meta">tek · zorunlu</span>
+      </div>
+      <div class="schema-vals">Hatırla (1) · Anla (2) · Uygula (3) · Analiz (4) · Değerlendir (5) · Yarat (6)</div>
+      <div class="schema-col">bloom_level SMALLINT</div>
+    </div>
+
+    <div class="schema-card">
+      <div class="schema-header">
+        <span class="schema-num" style="background:var(--blue-light);color:var(--blue-text)">Eksen 7</span>
+        <span class="schema-title">Psikometrik Boyut</span>
+        <span class="schema-meta">çoklu · Pro-Me özgün</span>
+      </div>
+      <div class="schema-vals">Analitik Düşünme · Sözel Muhakeme · Sayısal Muhakeme · Problem Çözme · Uzamsal Düşünme · Bilimsel Sorgulama · Eleştirel Düşünce · Yaratıcılık</div>
+      <div class="schema-col">psiko_dims TEXT[]</div>
+    </div>
+
+    <div class="sql-block">
+<span class="sql-kw">CREATE TABLE</span> questions (<br>
+&nbsp;&nbsp;id &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="sql-type">SERIAL PRIMARY KEY</span>,<br>
+&nbsp;&nbsp;grade_level &nbsp;&nbsp;&nbsp;&nbsp;<span class="sql-type">SMALLINT</span>, <span class="sql-comment">-- 4 veya 8</span><br>
+&nbsp;&nbsp;difficulty &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="sql-type">VARCHAR(10)</span>, <span class="sql-comment">-- kolay/orta/zor</span><br>
+&nbsp;&nbsp;points &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="sql-type">SMALLINT</span>,<br>
+&nbsp;&nbsp;time_min &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="sql-type">SMALLINT</span>,<br>
+&nbsp;&nbsp;text &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="sql-type">TEXT</span>, <span class="sql-comment">-- LaTeX içerebilir</span><br>
+&nbsp;&nbsp;hint &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="sql-type">TEXT</span>,<br>
+&nbsp;&nbsp;rubric &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="sql-type">JSONB</span>, <span class="sql-comment">-- [{kriter, puan}]</span><br>
+&nbsp;&nbsp;ders_cats &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="sql-type">TEXT[]</span>,<br>
+&nbsp;&nbsp;timss_content &nbsp;&nbsp;<span class="sql-type">TEXT[]</span>,<br>
+&nbsp;&nbsp;timss_cognitive <span class="sql-type">VARCHAR(20)</span>, <span class="sql-comment">-- Knowing/Applying/Reasoning</span><br>
+&nbsp;&nbsp;pirls_purpose &nbsp;&nbsp;<span class="sql-type">VARCHAR(20)</span>, <span class="sql-comment">-- NULL olabilir</span><br>
+&nbsp;&nbsp;pirls_processes <span class="sql-type">TEXT[]</span>, <span class="sql-comment">-- NULL olabilir</span><br>
+&nbsp;&nbsp;bloom_level &nbsp;&nbsp;&nbsp;&nbsp;<span class="sql-type">SMALLINT</span>, <span class="sql-comment">-- 1-6</span><br>
+&nbsp;&nbsp;psiko_dims &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="sql-type">TEXT[]</span>,<br>
+&nbsp;&nbsp;created_at &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="sql-type">TIMESTAMPTZ DEFAULT NOW()</span><br>
+);
+    </div>
+  </div>
+
+</main>
+</div>
+
+<script>
+var bloomNames=["Hatırla","Anla","Uygula","Analiz","Değerlendir","Yarat"];
+var cogDesc={
+  Knowing:"Knowing — Bilgi ve kavramları hatırlama, sınıflandırma, basit hesaplama. TIMSS 8. sınıf ağırlığı %35.",
+  Applying:"Applying — Bilgi ve kavramsal anlayışı strateji geliştirerek uygulama. TIMSS 8. sınıf ağırlığı %40.",
+  Reasoning:"Reasoning — Alışılmamış durumlar, karmaşık bağlamlar ve çok adımlı problemler için mantıksal-sistematik düşünme. TIMSS 8. sınıf ağırlığı %25."
+};
+var pirlsProcDesc={
+  Retrieve:"Retrieve — Açıkça belirtilen bilgiyi odaklanarak geri getirme ve bulma. PIRLS ağırlığı %20.",
+  Infer:"Infer — Doğrudan yazılmayan bilgiden mantıksal çıkarım yapma. PIRLS ağırlığı %30.",
+  Interpret:"Interpret — Fikirleri ve bilgileri yorumlama, bütünleştirme ve bağlantı kurma. PIRLS ağırlığı %30.",
+  Evaluate:"Evaluate — İçeriği, argümanları ve metinsel unsurları eleştirel olarak değerlendirme. PIRLS ağırlığı %20."
+};
+var sel={ders:[],tc:[],psiko:[],pp:[]};
+var selBloom=-1,selCog=null,selPurpose=null;
+var expandedId=null,activeF='all';
+
+var DB=[
+  {id:1,ders:["Fizik"],tc:["Fizik (Fen)"],cog:"Applying",pirls_purpose:null,pp:[],bloom:"Uygula",psiko:["Sayısal Muhakeme","Analitik Düşünme"],grade:8,diff:"orta",pts:15,time:5,
+   text:"Bir cisim \\(v_0=12\\text{ m/s}\\) ile düşey yukarı fırlatılıyor. \\(g=9{,}8\\text{ m/s}^2\\) alınarak \\(t=2\\text{ s}\\) sonraki hızını hesaplayın ve fiziksel yorumunu yapın.",
+   rubric:[["\\(v=v_0-gt\\) formülünü doğru uygulama",6],["Sayısal hesap doğruluğu",5],["Fiziksel yorum — yön değişimi açıklaması",4]],
+   hint:"Sonucun işaretine dikkat edin — negatif değer ne anlama gelir?"},
+  {id:2,ders:["Türkçe"],tc:[],cog:null,pirls_purpose:"Literary",pp:["Interpret","Evaluate"],bloom:"Değerlendir",psiko:["Eleştirel Düşünce","Sözel Muhakeme"],grade:8,diff:"zor",pts:20,time:10,
+   text:"Okuduğunuz metindeki ana karakterin davranışlarını değerlendirin. Karakterin kararları tutarlı mı? Metinden kanıtlar göstererek açıklayın.",
+   rubric:[["Karakterin davranışlarını doğru özetleme",5],["Tutarlılık ya da çelişki analizi",8],["Metinden somut kanıt gösterme",7]],
+   hint:"Karakterin farklı sahnelerdeki tepkilerini karşılaştırın."},
+  {id:3,ders:["Matematik"],tc:["Cebir"],cog:"Reasoning",pirls_purpose:null,pp:[],bloom:"Analiz",psiko:["Eleştirel Düşünce","Sözel Muhakeme"],grade:8,diff:"zor",pts:20,time:8,
+   text:"\\(P \\Rightarrow Q\\) ve \\(P\\) doğruyken \\(Q\\) doğru çıkar. Peki \\(Q\\) doğruysa \\(P\\) doğru mudur? İki argümanı karşılaştırın.",
+   rubric:[["Modus ponens'i doğru tanımlama",8],["Tersinin geçersizliğini açıklama",8],["Karşı örnek üretme",4]],
+   hint:null}
+];
+
+function go(t,btn){
+  document.querySelectorAll('.sb-btn').forEach(b=>b.classList.remove('on'));
+  if(btn)btn.classList.add('on');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.getElementById('p-'+t).classList.add('on');
+  if(t==='read'){expandedId=null;renderList();}
+  updateStats();
+}
+
+function tog(el){
+  var dim=el.dataset.dim,v=el.dataset.v,cls='s-'+dim;
+  if(el.classList.contains(cls)){el.classList.remove(cls);var i=sel[dim].indexOf(v);if(i>-1)sel[dim].splice(i,1);}
+  else{el.classList.add(cls);sel[dim].push(v);}
+}
+function togPirls(el){
+  var v=el.dataset.v;
+  if(el.classList.contains('s-pp')){el.classList.remove('s-pp');var i=sel.pp.indexOf(v);if(i>-1)sel.pp.splice(i,1);}
+  else{
+    el.classList.add('s-pp');sel.pp.push(v);
+    var info=document.getElementById('pirls-info');
+    info.style.display='block';info.textContent=pirlsProcDesc[v];
+  }
+}
+function setCog(btn){
+  document.querySelectorAll('.tcog-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');selCog=btn.dataset.cog;
+  var i=document.getElementById('cog-info');
+  i.style.display='block';i.textContent=cogDesc[selCog];
+}
+function setPurpose(btn){
+  document.querySelectorAll('.ppurp-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');selPurpose=btn.dataset.p;
+  var info=document.getElementById('pirls-info');
+  if(selPurpose==='N/A'){info.style.display='none';return;}
+  info.style.display='block';
+  info.textContent=selPurpose==='Literary'?
+    'Edebi okuma — olay, karakter, atmosfer ve duygularla ilgilenme; dil ve edebi formlara dair deneyim kazanma.':
+    'Bilgilendirici okuma — bilimsel, tarihsel, coğrafi veya sosyal içerikten bilgi edinme ve kullanma.';
+}
+function setBloom(i){
+  selBloom=i;
+  document.querySelectorAll('.bs').forEach((s,j)=>s.classList.toggle('lit',j<=i));
+  document.getElementById('bloom-sel').innerHTML='<strong>'+bloomNames[i]+'</strong> seçildi (Düzey '+(i+1)+'/6)';
+}
+function renderPrev(){
+  var v=document.getElementById('d-qtext').value;
+  var box=document.getElementById('d-prev');
+  if(!v.trim()){box.innerHTML='<span style="color:#aaa">Yazmaya başlayın…</span>';return;}
+  box.innerHTML=v.replace(/\n/g,'<br>');rkx(box);
+}
+function rkx(el){
+  if(window.renderMathInElement)renderMathInElement(el,{delimiters:[{left:"$$",right:"$$",display:true},{left:"\\(",right:"\\)",display:false},{left:"$",right:"$",display:false}],throwOnError:false});
+}
+function addR(){
+  var d=document.createElement('div');d.className='rrow';
+  d.innerHTML='<input type="text" placeholder="Kriter…"><input type="text" class="rpt" placeholder="pt"><button class="rrem" onclick="delR(this)">✕</button>';
+  document.getElementById('rrows').appendChild(d);
+}
+function delR(btn){btn.parentElement.remove();}
+function saveQ(){
+  var txt=document.getElementById('d-qtext').value.trim();
+  if(!txt){alert('Soru metni boş olamaz.');return;}
+  if(!sel.ders.length){alert('En az bir ders kategorisi seçin.');return;}
+  if(selBloom<0){alert('Bloom seviyesi seçin.');return;}
+  if(!sel.psiko.length){alert('En az bir psikometrik boyut seçin.');return;}
+  var rubric=[];
+  document.querySelectorAll('#rrows .rrow').forEach(r=>{
+    var ins=r.querySelectorAll('input');
+    if(ins[0].value.trim())rubric.push([ins[0].value.trim(),parseInt(ins[1].value)||0]);
+  });
+  DB.unshift({
+    id:Date.now(),ders:[...sel.ders],tc:[...sel.tc],cog:selCog,
+    pirls_purpose:selPurpose==='N/A'?null:selPurpose,pp:[...sel.pp],
+    bloom:bloomNames[selBloom],psiko:[...sel.psiko],
+    grade:parseInt(document.getElementById('d-grade').value),
+    diff:document.getElementById('d-diff').value,
+    pts:parseInt(document.getElementById('d-pts').value)||10,
+    time:parseInt(document.getElementById('d-time').value)||5,
+    text:txt,rubric:rubric,hint:document.getElementById('d-hint').value.trim()||null
+  });
+  updateStats();
+  alert('Soru kütüphaneye kaydedildi!');
+  document.getElementById('d-qtext').value='';renderPrev();
+  sel={ders:[],tc:[],psiko:[],pp:[]};selBloom=-1;selCog=null;selPurpose=null;
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('s-ders','s-tc','s-psiko','s-pp'));
+  document.querySelectorAll('.tcog-btn,.ppurp-btn').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.bs').forEach(s=>s.classList.remove('lit'));
+  document.getElementById('bloom-sel').textContent='Seçilmedi';
+  document.getElementById('cog-info').style.display='none';
+  document.getElementById('pirls-info').style.display='none';
+  document.getElementById('d-hint').value='';
+}
+function updateStats(){
+  document.getElementById('stat-total').textContent=DB.length;
+  document.getElementById('stat-mat').textContent=DB.filter(q=>q.ders.includes('Matematik')).length;
+  document.getElementById('stat-fen').textContent=DB.filter(q=>q.ders.includes('Fizik')||q.ders.includes('Kimya')||q.ders.includes('Biyoloji')).length;
+  document.getElementById('stat-turk').textContent=DB.filter(q=>q.ders.includes('Türkçe')).length;
+}
+function setF(el){
+  document.querySelectorAll('.fp').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');activeF=el.dataset.f;expandedId=null;renderList();
+}
+function filterDB(){
+  if(activeF==='all')return DB;
+  var parts=activeF.split(':'),dim=parts[0],val=parts[1];
+  return DB.filter(q=>{
+    if(dim==='tc')return q.tc.includes(val);
+    if(dim==='cog')return q.cog===val;
+    if(dim==='pirls')return q.pirls_purpose===val;
+    if(dim==='pp')return q.pp.includes(val);
+    if(dim==='bloom')return q.bloom===val;
+    if(dim==='psiko')return q.psiko.includes(val);
+    if(dim==='ders')return q.ders.includes(val);
+    return true;
+  });
+}
+function renderList(){
+  var list=document.getElementById('qlist');
+  var data=filterDB();
+  document.getElementById('lib-count').textContent=data.length+' soru';
+  if(!data.length){list.innerHTML='<div class="empty-state">Bu filtrede soru bulunamadı.</div>';return;}
+  list.innerHTML=data.map((q,i)=>{
+    var open=expandedId===q.id;
+    var dLbl=q.diff==='kolay'?'Kolay':q.diff==='orta'?'Orta':'Zor';
+    var rubHtml=q.rubric.length?'<table class="rtable">'+q.rubric.map((r,ri)=>'<tr><td id="rc'+q.id+'_'+ri+'">'+r[0]+'</td><td>'+r[1]+' pt</td></tr>').join('')+'</table>':'<span style="font-size:12px;color:#aaa">Rubrik yok</span>';
+    var hintHtml=q.hint?'<div class="hint-box" id="hint'+q.id+'"></div>':'';
+    var pirlsBadges=(q.pirls_purpose?'<span class="badge b-pp">PIRLS:'+q.pirls_purpose+'</span>':'')+q.pp.map(p=>'<span class="badge b-pc">'+p+'</span>').join('');
+    return '<div class="qcard'+(open?' open':'')+'" onclick="togCard('+q.id+')" id="qc'+q.id+'">'+
+      '<div class="qcard-head"><span class="qn">'+(i+1)+'.</span>'+
+      '<div class="qb"><div class="qtxt" id="qt'+q.id+'"></div>'+
+      '<div class="qmeta">'+
+        q.ders.map(d=>'<span class="badge b-ders">'+d+'</span>').join('')+
+        q.tc.map(t=>'<span class="badge b-tc">'+t+'</span>').join('')+
+        (q.cog?'<span class="badge b-tg">'+q.cog+'</span>':'')+
+        pirlsBadges+
+        '<span class="badge b-bloom">'+q.bloom+'</span>'+
+        '<span class="badge b-diff-'+q.diff+'">'+dLbl+'</span>'+
+        '<span class="badge b-pts">'+q.pts+' pt · Gr.'+q.grade+'</span>'+
+      '</div>'+
+      '<div class="qdtl"><div class="dtlh">Değerlendirme Rubriği</div>'+rubHtml+hintHtml+'</div>'+
+      '</div></div></div>';
+  }).join('');
+  data.forEach(q=>{
+    var el=document.getElementById('qt'+q.id);
+    if(el){el.innerHTML=q.text.replace(/\n/g,'<br>');rkx(el);}
+    if(q.hint){var hel=document.getElementById('hint'+q.id);if(hel){hel.innerHTML='<strong style="font-size:11px">İpucu: </strong>'+q.hint;rkx(hel);}}
+    q.rubric.forEach((r,ri)=>{var rel=document.getElementById('rc'+q.id+'_'+ri);if(rel){rel.innerHTML=r[0];rkx(rel);}});
+  });
+}
+function togCard(id){expandedId=expandedId===id?null:id;renderList();}
+updateStats();
+
+/* ── AI GENERATE ── */
+var aiGenerated = [];
+var lastAIQ = null;
+var aiSel = { tc:[], pp:[], psiko:[] };
+var aiBloom = -1;
+var aiCog = 'Applying';
+var aiPurpose = null;
+
+function aiTog(el){
+  var dim=el.dataset.dim, v=el.dataset.v;
+  var cls='s-'+dim.replace('ai-','');
+  if(el.classList.contains(cls)){
+    el.classList.remove(cls);
+    var key=dim.replace('ai-','');
+    var i=aiSel[key].indexOf(v); if(i>-1) aiSel[key].splice(i,1);
+  } else {
+    el.classList.add(cls);
+    var key=dim.replace('ai-','');
+    aiSel[key].push(v);
+  }
+}
+function setAiCog(btn){
+  document.querySelectorAll('#p-aigen .tcog-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on'); aiCog=btn.dataset.cog;
+}
+function setAiPurpose(btn){
+  document.querySelectorAll('#p-aigen .ppurp-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on'); aiPurpose=btn.dataset.p==='N/A'?null:btn.dataset.p;
+}
+function setAiBloom(i){
+  aiBloom=i;
+  document.querySelectorAll('#ai-bloom-bar .bs').forEach((s,j)=>s.classList.toggle('lit',j<=i));
+  document.getElementById('ai-bloom-sel').innerHTML='<strong>'+bloomNames[i]+'</strong> seçildi (Düzey '+(i+1)+'/6)';
+}
+function clearAiBloom(){
+  aiBloom=-1;
+  document.querySelectorAll('#ai-bloom-bar .bs').forEach(s=>s.classList.remove('lit'));
+  document.getElementById('ai-bloom-sel').textContent='Seçilmedi — Claude karar verir';
+}
+
+async function generateQ(){
+  var ders = document.getElementById('ai-ders').value;
+  var grade = document.getElementById('ai-grade').value;
+  var diff = document.getElementById('ai-diff').value;
+  var pts = parseInt(document.getElementById('ai-pts').value)||10;
+  var topic = document.getElementById('ai-topic').value.trim();
+  var btn = document.getElementById('ai-gen-btn');
+  var errEl = document.getElementById('ai-error');
+  errEl.style.display='none';
+  btn.disabled=true;
+  btn.innerHTML='<div class="ai-spinner"></div> Üretiliyor…';
+  document.getElementById('ai-preview-wrap').style.display='none';
+
+  // Build constraint hints from selections
+  var tcHint = aiSel.tc.length ? 'TIMSS İçerik Alanı: '+aiSel.tc.join(', ') : null;
+  var cogHint = aiCog ? 'TIMSS Bilişsel Alan: '+aiCog : null;
+  var bloomHint = aiBloom>=0 ? 'Bloom Düzeyi: '+bloomNames[aiBloom]+' ('+(aiBloom+1)+'/6)' : null;
+  var psikoHint = aiSel.psiko.length ? 'Psikometrik Boyutlar: '+aiSel.psiko.join(', ') : null;
+  var pirlsHint = aiPurpose ? 'PIRLS Okuma Amacı: '+aiPurpose+(aiSel.pp.length?' — Süreçler: '+aiSel.pp.join(', '):'') : null;
+
+  var constraints = [tcHint,cogHint,bloomHint,psikoHint,pirlsHint].filter(Boolean);
+  var constraintBlock = constraints.length
+    ? '\nBelirtilen kısıtlar (BUNLARA UYGUN soru üret):\n'+constraints.map(c=>'- '+c).join('\n')
+    : '\nqcat etiketleri için uygun değerleri kendin belirle.';
+
+  var bloomOpts = {kolay:['Hatırla','Anla'],orta:['Uygula','Analiz'],zor:['Değerlendir','Yarat']};
+
+  var prompt = `Sen Pro-Me AI eğitim platformu için açık uçlu soru oluşturan bir uzmansın.
+
+Parametreler:
+- Ders: ${ders}
+- Sınıf: ${grade}. sınıf
+- Zorluk: ${diff}
+- Konu: ${topic||'Uygun bir konu seç'}
+${constraintBlock}
+
+KURALLAR:
+1. Gerçekten açık uçlu olmalı — tek cevaplı çoktan seçmeli DEĞİL
+2. Matematiksel ifadeler için LaTeX kullan ama JSON string içinde backslash'leri mutlaka çift yaz: \\( ... \\) ve $$ ... $$
+3. Gerçek yaşamla bağlantılı, düşündürücü sorular tercih et
+4. Türkçe yaz
+5. Rubrik 2-4 kriter, toplamda ${pts} puana ulaşsın
+
+SADECE ve SADECE aşağıdaki JSON formatında cevap ver. Başında/sonunda hiçbir açıklama, markdown, kod bloğu YAZMA. İlk karakter { olmalı, son karakter } olmalı:
+{
+  "text": "soru metni (LaTeX kullanabilirsin)",
+  "bloom": "${aiBloom>=0 ? bloomNames[aiBloom] : bloomOpts[diff][0]+' veya '+bloomOpts[diff][1]+' (uygun olanı seç)'}",
+  "timss_content": [${aiSel.tc.length ? '"'+aiSel.tc[0]+'"' : '"uygun TIMSS içerik alanı"'}],
+  "timss_cognitive": "${aiCog}",
+  "pirls_purpose": ${aiPurpose ? '"'+aiPurpose+'"' : 'null'},
+  "pirls_processes": ${aiSel.pp.length ? JSON.stringify(aiSel.pp) : '[]'},
+  "psiko": ${aiSel.psiko.length ? JSON.stringify(aiSel.psiko.slice(0,2)) : '["iki uygun psikometrik boyut"]'},
+  "rubric": [
+    {"kriter": "birinci kriter", "puan": ${Math.floor(pts*0.4)}},
+    {"kriter": "ikinci kriter", "puan": ${Math.floor(pts*0.35)}},
+    {"kriter": "üçüncü kriter", "puan": ${pts - Math.floor(pts*0.4) - Math.floor(pts*0.35)}}
+  ],
+  "hint": "kısa yönlendirme ipucu veya null",
+  "pts": ${pts},
+  "time_min": ${diff==='kolay'?3:diff==='orta'?5:8}
+}`;
+
+  try {
+    var resp = await fetch('http://50.6.248.191:3002/chat',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ messages:[{role:'user',content:prompt}], model:'claude-haiku-4-5-20251001' })
+    });
+    var data = await resp.json();
+    if(!resp.ok){throw new Error(data.error||'Sunucu hatası');}
+    var raw = data.reply || data.response || data.content || data.text || '';
+    if(typeof raw !== 'string') raw = JSON.stringify(raw);
+    console.log('RAW:', raw.slice(0,300));
+    var clean = raw.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
+    var start=clean.indexOf('{'), end=clean.lastIndexOf('}');
+    if(start<0||end<=start) throw new Error('JSON bulunamadı. Raw: '+raw.slice(0,100));
+    clean = clean.slice(start, end+1);
+    // Fix single backslashes (LaTeX) that break JSON parse
+    clean = clean.replace(/\\([^\\"/bfnrtu])/g, '\\\\$1');
+    console.log('CLEAN:', clean.slice(0,300));
+    var q;
+    try {
+      q = JSON.parse(clean);
+    } catch(pe) {
+      console.log('PARSE ERR:', pe.message, 'at', clean.slice(Math.max(0,parseInt(pe.message.match(/\d+/)||[0])-20), parseInt(pe.message.match(/\d+/)||[0])+20));
+      var getStr = function(key) {
+        var m = clean.match(new RegExp('"'+key+'"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"'));
+        return m ? m[1].replace(/\\n/g,'\n').replace(/\\\\/g,'\\') : null;
+      };
+      var getArr = function(key) {
+        var m = clean.match(new RegExp('"'+key+'"\\s*:\\s*\\[([^\\]]*)\\]'));
+        if(!m) return [];
+        var matches = m[1].match(/"([^"]+)"/g)||[];
+        return matches.map(function(s){return s.replace(/"/g,'');});
+      };
+      var txt = getStr('text');
+      if(!txt) throw new Error('Yanıt parse edilemedi. Konsolu kontrol edin (F12).');
+      q = {
+        text: txt,
+        bloom: getStr('bloom') || bloomNames[Math.max(0,aiBloom)],
+        timss_content: getArr('timss_content'),
+        timss_cognitive: getStr('timss_cognitive') || aiCog,
+        pirls_purpose: getStr('pirls_purpose'),
+        pirls_processes: getArr('pirls_processes'),
+        psiko: getArr('psiko'),
+        rubric: [],
+        hint: getStr('hint'),
+        pts: parseInt(document.getElementById('ai-pts').value)||10,
+        time_min: 5
+      };
+      var rubricMatches = [...clean.matchAll(/"kriter"\s*:\s*"([^"]+)"[^}]*"puan"\s*:\s*(\d+)/g)];
+      rubricMatches.forEach(function(rm){ q.rubric.push({kriter:rm[1], puan:parseInt(rm[2])}); });
+      if(!q.rubric.length) q.rubric=[{kriter:'Doğru yaklaşım',puan:5},{kriter:'Açıklama ve gerekçe',puan:5}];
+    }
+
+    lastAIQ = {
+      ders:[ders],
+      tc: Array.isArray(q.timss_content)?q.timss_content.filter(Boolean):(aiSel.tc.length?aiSel.tc:[]),
+      cog: q.timss_cognitive||aiCog,
+      pirls_purpose: q.pirls_purpose||null,
+      pp: Array.isArray(q.pirls_processes)?q.pirls_processes:[],
+      bloom: q.bloom||(aiBloom>=0?bloomNames[aiBloom]:bloomOpts[diff][0]),
+      psiko: Array.isArray(q.psiko)?q.psiko.filter(s=>s&&!s.includes('psiko')).slice(0,3):(aiSel.psiko.length?aiSel.psiko:[]),
+      grade: parseInt(grade), diff: diff,
+      pts: q.pts||pts, time: q.time_min||5,
+      text: q.text,
+      rubric: (q.rubric||[]).map(r=>[r.kriter||r.criterion||'',r.puan||r.points||5]),
+      hint: q.hint&&q.hint!=='null'?q.hint:null
+    };
+
+    renderAIPreview(lastAIQ);
+    document.getElementById('ai-preview-wrap').style.display='block';
+
+  } catch(e){
+    errEl.style.display='block';
+    errEl.textContent='Hata: '+e.message;
+  }
+
+  btn.disabled=false;
+  btn.innerHTML='<svg width="14" height="14" fill="none" viewBox="0 0 16 16"><path d="M13 3L6 10l-3-3" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Soru Üret';
+}
+
+function renderAIPreview(q){
+  var textEl=document.getElementById('ai-prev-text');
+  // Clean up escaped chars from model output
+  var txt = (q.text||'')
+    .replace(/\\n/g,'\n')
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\n/g,'<br>');
+  textEl.innerHTML = txt;
+  rkx(textEl);
+
+  var tags=document.getElementById('ai-prev-tags');
+  var dLbl=q.diff==='kolay'?'Kolay':q.diff==='orta'?'Orta':'Zor';
+  tags.innerHTML=
+    q.ders.map(d=>'<span class="badge b-ders">'+d+'</span>').join('')+
+    q.tc.filter(Boolean).map(t=>'<span class="badge b-tc">'+t+'</span>').join('')+
+    (q.cog?'<span class="badge b-tg">'+q.cog+'</span>':'')+
+    '<span class="badge b-bloom">'+q.bloom+'</span>'+
+    q.psiko.map(p=>'<span class="badge b-psiko">'+p+'</span>').join('')+
+    '<span class="badge b-diff-'+q.diff+'">'+dLbl+'</span>'+
+    '<span class="badge b-pts">'+q.pts+' pt · Gr.'+q.grade+'</span>';
+
+  var rub=document.getElementById('ai-prev-rubric');
+  rub.innerHTML=q.rubric.map(r=>{
+    var el=document.createElement('div');
+    el.className='ai-preview-rubric-row';
+    el.innerHTML='<span id="rr_'+Math.random().toString(36).slice(2)+'">'+r[0]+'</span><span style="color:var(--gray-400);white-space:nowrap;padding-left:12px">'+r[1]+' pt</span>';
+    return el.outerHTML;
+  }).join('');
+  rub.querySelectorAll('span[id]').forEach(el=>{rkx(el);});
+
+  var hw=document.getElementById('ai-prev-hint-wrap');
+  if(q.hint){
+    hw.style.display='block';
+    var hel=document.getElementById('ai-prev-hint');
+    hel.innerHTML=q.hint; rkx(hel);
+  } else { hw.style.display='none'; }
+}
+
+function acceptAI(){
+  if(!lastAIQ)return;
+  DB.unshift({...lastAIQ, id:Date.now()});
+  updateStats();
+  aiGenerated.unshift({...lastAIQ, id:Date.now()});
+  renderAIHistory();
+  document.getElementById('ai-preview-wrap').style.display='none';
+  lastAIQ=null;
+  showToast('Soru kütüphaneye kaydedildi!');
+}
+
+function editAI(){
+  if(!lastAIQ)return;
+  // Copy to manual form and switch tab
+  var q=lastAIQ;
+  // Switch to create tab
+  document.querySelectorAll('.sb-btn').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.getElementById('p-create').classList.add('on');
+  document.querySelectorAll('.sb-btn').forEach(b=>{if(b.textContent.includes('Manuel'))b.classList.add('on');});
+
+  // Fill form
+  document.getElementById('d-qtext').value=q.text; renderPrev();
+  document.getElementById('d-diff').value=q.diff;
+  document.getElementById('d-pts').value=q.pts;
+  document.getElementById('d-time').value=q.time;
+  if(q.hint) document.getElementById('d-hint').value=q.hint;
+
+  // Set bloom
+  var bi=bloomNames.indexOf(q.bloom);
+  if(bi>=0) setBloom(bi);
+
+  // Set ders chips
+  sel={ders:[],tc:[],psiko:[],pp:[]};
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('s-ders','s-tc','s-psiko','s-pp'));
+  document.querySelectorAll('.chip[data-dim="ders"]').forEach(c=>{
+    if(q.ders.includes(c.dataset.v)){c.classList.add('s-ders');sel.ders.push(c.dataset.v);}
+  });
+  document.querySelectorAll('.chip[data-dim="tc"]').forEach(c=>{
+    if(q.tc.includes(c.dataset.v)){c.classList.add('s-tc');sel.tc.push(c.dataset.v);}
+  });
+  document.querySelectorAll('.chip[data-dim="psiko"]').forEach(c=>{
+    if(q.psiko.includes(c.dataset.v)){c.classList.add('s-psiko');sel.psiko.push(c.dataset.v);}
+  });
+  document.querySelectorAll('.tcog-btn').forEach(b=>{
+    if(b.dataset.cog===q.cog){b.classList.add('on');selCog=q.cog;}
+  });
+
+  // Fill rubric
+  document.getElementById('rrows').innerHTML='';
+  q.rubric.forEach(r=>{
+    var d=document.createElement('div');d.className='rrow';
+    d.innerHTML='<input type="text" placeholder="Kriter…" value="'+r[0].replace(/"/g,'&quot;')+'"><input type="text" class="rpt" placeholder="pt" value="'+r[1]+'"><button class="rrem" onclick="delR(this)">✕</button>';
+    document.getElementById('rrows').appendChild(d);
+  });
+
+  window.scrollTo(0,0);
+}
+
+function renderAIHistory(){
+  var wrap=document.getElementById('ai-history-wrap');
+  var list=document.getElementById('ai-history-list');
+  var countEl=document.getElementById('ai-hist-count');
+  if(!aiGenerated.length){wrap.style.display='none';return;}
+  wrap.style.display='block';
+  countEl.textContent=aiGenerated.length;
+  list.innerHTML=aiGenerated.slice(0,5).map((q,i)=>{
+    var inDB=DB.some(d=>d.text===q.text);
+    return '<div style="background:white;border:0.5px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:6px;display:flex;align-items:center;gap:10px">'+
+      '<div style="flex:1;font-size:13px;color:var(--gray-900);line-height:1.5" id="aih'+i+'">'+q.text.slice(0,100)+(q.text.length>100?'…':'')+'</div>'+
+      '<span class="badge '+(inDB?'b-tc':'b-diff-orta')+'">'+(inDB?'Kaydedildi':'Taslak')+'</span></div>';
+  }).join('');
+}
+
+function showToast(msg){
+  var t=document.createElement('div');
+  t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#534AB7;color:white;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:9999;box-shadow:0 4px 16px rgba(83,74,183,.4);transition:opacity .3s';
+  t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),300);},2200);
+}
+</script>
+</body>
+</html>
