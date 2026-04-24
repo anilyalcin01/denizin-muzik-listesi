@@ -103,6 +103,39 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 @keyframes spin{to{transform:rotate(360deg)}}
 .spin{display:inline-block;width:9px;height:9px;border:1.5px solid #30363d;border-top-color:#58a6ff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:4px}
+
+.tab-bar{display:flex;gap:0;background:#0d1117;border-bottom:1px solid #30363d;padding:0 8px;align-items:center}
+.tab-btn{background:none;border:none;border-bottom:2px solid transparent;color:#8b949e;font-size:11px;padding:8px 12px;cursor:pointer;font-family:monospace;letter-spacing:.05em;text-transform:uppercase;transition:all .15s}
+.tab-btn:hover{color:#e6edf3}
+.tab-btn.active{color:#58a6ff;border-bottom-color:#58a6ff}
+.tab-spacer{flex:1}
+.tab-meta{font-size:10px;color:#484f58;font-family:monospace;padding:0 6px}
+.panel{display:none;flex:1;flex-direction:column;min-height:0}
+.panel.active{display:flex}
+
+.bill-feed{flex:1;overflow-y:auto;padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;align-content:start;min-height:300px;max-height:420px}
+.bill-card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.bill-card.unsupported{opacity:.6}
+.bill-card.error{border-color:#f85149}
+.bill-card.missing{border-color:#d29922}
+.bill-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.bill-name{font-size:12px;font-weight:600;color:#e6edf3}
+.bill-status{font-size:9px;font-family:monospace;padding:2px 6px;border-radius:999px;letter-spacing:.05em;text-transform:uppercase}
+.bs-ok{background:rgba(63,185,80,.12);color:#3fb950;border:1px solid rgba(63,185,80,.3)}
+.bs-error{background:rgba(248,81,73,.12);color:#f85149;border:1px solid rgba(248,81,73,.3)}
+.bs-missing{background:rgba(210,153,34,.12);color:#d29922;border:1px solid rgba(210,153,34,.3)}
+.bs-unsupported{background:#21262d;color:#8b949e;border:1px solid #30363d}
+.bill-num{font-size:18px;font-weight:600;color:#fff;font-family:monospace}
+.bill-num-sub{font-size:11px;color:#8b949e;font-family:monospace}
+.bill-bar{height:5px;background:#21262d;border-radius:3px;overflow:hidden}
+.bill-bar-fill{height:100%;background:linear-gradient(90deg,#3fb950,#58a6ff);transition:width .3s}
+.bill-bar-fill.warn{background:linear-gradient(90deg,#d29922,#f85149)}
+.bill-bar-fill.danger{background:#f85149}
+.bill-meta{font-size:10px;color:#484f58;font-family:monospace;display:flex;justify-content:space-between;gap:6px}
+.bill-note{font-size:10px;color:#8b949e;line-height:1.4}
+.bill-link{font-size:10px;color:#58a6ff;text-decoration:none;font-family:monospace}
+.bill-link:hover{text-decoration:underline}
+.bill-empty{grid-column:1/-1;text-align:center;color:#8b949e;padding:30px;font-size:12px}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
@@ -155,19 +188,34 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 
   <div class="term-col">
-    <div class="term-bar">
-      <div class="tdots"><div class="tdot td1"></div><div class="tdot td2"></div><div class="tdot td3"></div></div>
-      <div class="term-title">root@hal-server-721123 — bash</div>
-      <button class="term-clr" onclick="clrTerm()">temizle</button>
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tab-terminal" onclick="switchTab('terminal')">Terminal</button>
+      <button class="tab-btn" id="tab-billing" onclick="switchTab('billing')">API Bakiyeleri</button>
+      <div class="tab-spacer"></div>
+      <span class="tab-meta" id="tabMeta"></span>
     </div>
-    <div class="term-feed" id="termFeed">
-      <span class="tl tinfo">Komuta Merkezi v4 — 50.6.248.191</span>
-      <span class="tl to">Onaylanan komutlar burada akacak.</span>
-      <span class="tl"> </span>
+
+    <div class="panel active" id="panel-terminal">
+      <div class="term-bar">
+        <div class="tdots"><div class="tdot td1"></div><div class="tdot td2"></div><div class="tdot td3"></div></div>
+        <div class="term-title">root@hal-server-721123 — bash</div>
+        <button class="term-clr" onclick="clrTerm()">temizle</button>
+      </div>
+      <div class="term-feed" id="termFeed">
+        <span class="tl tinfo">Komuta Merkezi v4 — 50.6.248.191</span>
+        <span class="tl to">Onaylanan komutlar burada akacak.</span>
+        <span class="tl"> </span>
+      </div>
+      <div class="term-inp-area">
+        <span class="tp-lbl">root@hal ➜</span>
+        <input class="term-inp" id="termInp" placeholder="komut gir..." onkeydown="if(event.key==='Enter'){const v=this.value.trim();if(v){runCmd(v);this.value='';}}" />
+      </div>
     </div>
-    <div class="term-inp-area">
-      <span class="tp-lbl">root@hal ➜</span>
-      <input class="term-inp" id="termInp" placeholder="komut gir..." onkeydown="if(event.key==='Enter'){const v=this.value.trim();if(v){runCmd(v);this.value='';}}" />
+
+    <div class="panel" id="panel-billing">
+      <div class="bill-feed" id="billFeed">
+        <div class="bill-empty">Yükleniyor...</div>
+      </div>
     </div>
   </div>
 </div>
@@ -440,6 +488,80 @@ async function transcribeAudio(blob){
   }catch(e){
     inp.placeholder='Yaz... (Enter gönder, Shift+Enter yeni satır)';
     addMsg('claude','Ses işlenemedi: '+e.message,'c',null,0);
+  }
+}
+
+function switchTab(name){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  document.getElementById('panel-'+name).classList.add('active');
+  if(name==='billing') loadBilling();
+  document.getElementById('tabMeta').textContent='';
+}
+
+function fmtNum(n){
+  if(n==null||isNaN(n)) return '—';
+  if(n>=1e6) return (n/1e6).toFixed(2)+'M';
+  if(n>=1e3) return (n/1e3).toFixed(1)+'K';
+  return Math.round(n*100)/100;
+}
+function fmtDuration(s){
+  if(s==null) return '—';
+  if(s<60) return s+'s';
+  if(s<3600) return Math.floor(s/60)+'dk';
+  return (s/3600).toFixed(1)+'sa';
+}
+
+function renderBillCard(key,svc){
+  const label=svc.label||key;
+  const status=svc.status||'error';
+  const cls=status==='ok'?'':' '+status;
+  let body='';
+  if(status==='ok'){
+    let pct=null,sub='';
+    if(svc.limit&&svc.used!=null){
+      pct=Math.min(100,(svc.used/svc.limit)*100);
+      sub=fmtNum(svc.remaining)+' / '+fmtNum(svc.limit)+' '+(svc.unit||'');
+      body=`<div class="bill-num">${fmtNum(svc.remaining)}<span class="bill-num-sub"> kalan</span></div>
+        <div class="bill-bar"><div class="bill-bar-fill ${pct>90?'danger':pct>70?'warn':''}" style="width:${100-pct}%"></div></div>
+        <div class="bill-meta"><span>${sub}</span><span>${Math.round(100-pct)}% kaldı</span></div>`;
+    }else if(svc.remaining!=null){
+      const val=svc.unit==='saniye'?fmtDuration(svc.remaining):fmtNum(svc.remaining);
+      body=`<div class="bill-num">${val}<span class="bill-num-sub"> ${svc.unit||''}</span></div>
+        <div class="bill-meta"><span>${svc.tier?'plan: '+svc.tier:''}</span><span>kalan</span></div>`;
+    }else{
+      body=`<div class="bill-num">—</div><div class="bill-note">veri yok</div>`;
+    }
+  }else if(status==='unsupported'){
+    body=`<div class="bill-note">${svc.note||'Public balance API yok'}</div>
+      ${svc.dashboard?`<a class="bill-link" href="${svc.dashboard}" target="_blank">dashboard'a git ↗</a>`:''}`;
+  }else if(status==='missing_key'){
+    body=`<div class="bill-note">API anahtarı tanımlı değil (.env'e ekle)</div>`;
+  }else{
+    body=`<div class="bill-note">${(svc.note||'bilinmeyen hata').replace(/</g,'&lt;')}</div>`;
+  }
+  const stCls={ok:'bs-ok',error:'bs-error',missing_key:'bs-missing',unsupported:'bs-unsupported'}[status]||'bs-error';
+  const stTxt={ok:'aktif',error:'hata',missing_key:'key yok',unsupported:'API yok'}[status]||status;
+  return `<div class="bill-card${cls}">
+    <div class="bill-head"><div class="bill-name">${label}</div><div class="bill-status ${stCls}">${stTxt}</div></div>
+    ${body}
+  </div>`;
+}
+
+async function loadBilling(){
+  const feed=document.getElementById('billFeed');
+  try{
+    const r=await fetch(API+'/api-billing');
+    const d=await r.json();
+    const svcs=d.services||{};
+    const cards=Object.entries(svcs).map(([k,v])=>renderBillCard(k,v)).join('');
+    feed.innerHTML=cards||'<div class="bill-empty">veri yok</div>';
+    const ts=d.updated?new Date(d.updated):null;
+    const meta=ts?ts.toLocaleTimeString('tr-TR'):'';
+    document.getElementById('tabMeta').textContent=(d._cached?'cache · ':'')+'son: '+meta;
+  }catch(e){
+    feed.innerHTML='<div class="bill-empty">yüklenemedi: '+e.message+'</div>';
   }
 }
 

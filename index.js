@@ -1,3 +1,6 @@
+const OpenAI = require("openai");
+const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
+require('dotenv').config({ path: '/opt/muzik/.env' });
 const express = require('express');
 const cors = require('cors');
 const { execFile, exec } = require('child_process');
@@ -463,72 +466,135 @@ app.post('/exec', function(req, res) {
   });
 });
 
-app.post('/chat', function(req, res) {
-  var messages = req.body.messages;
-  var system = req.body.system || '';
-  var model = req.body.model || 'claude-sonnet-4-20250514';
-  var terminalOutput = req.body.terminal_output;
+app.post('/chat', async function(req, res) {
+  try {
+    const messages = req.body.messages || [];
+    let system = req.body.system || '';
+    const model = req.body.model || 'gpt-4o';
+    const terminalOutput = req.body.terminal_output;
 
-  // Terminal ciktisi analizi modu
-  if (terminalOutput) {
-    system = 'Kullanici sunucuda bir komut calistirdi. Terminal ciktisini analiz et, Turkce acikla, onemli noktalari vurgula, varsa hata veya uyarilari belirt. Kisa ve net cevap ver.';
-    if (!messages || !messages.length) {
-      messages = [{ role: 'user', content: 'Komut ciktisi:\n```\n' + terminalOutput + '\n```' }];
+    if (terminalOutput) {
+      system = 'Kullanici sunucuda bir komut calistirdi. Terminal ciktisini analiz et, Turkce acikla, onemli noktalari vurgula, varsa hata veya uyarilari belirt. Kisa ve net cevap ver.';
+      if (!messages.length) {
+        messages.push({ role: 'user', content: 'Komut ciktisi:\n```\n' + terminalOutput + '\n```' });
+      }
     }
-  }
 
-  if (!messages || !messages.length) return res.status(400).json({ error: 'messages gerekli' });
+    if (!messages.length) return res.status(400).json({ error: 'messages gerekli' });
+    if (!openai) return res.status(500).json({ error: 'OPENAI_API_KEY ayarlanmamis' });
 
-  var apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY ayarlanmamis' });
+    const response = await openai.chat.completions.create({
+      model: model,
+      messages: system ? [{ role: 'system', content: system }, ...messages] : messages,
+      max_tokens: 4096
+    });
 
-  var https = require('https');
-  var payload = JSON.stringify({
-    model: model,
-    max_tokens: 4096,
-    system: system,
-    messages: messages
-  });
-
-  var options = {
-    hostname: 'api.anthropic.com',
-    path: '/v1/messages',
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'Content-Length': Buffer.byteLength(payload)
-    }
-  };
-
-  var apiReq = https.request(options, function(apiRes) {
-    var body = '';
-    apiRes.on('data', function(c) { body += c; });
-    apiRes.on('end', function() {
-      try {
-        var data = JSON.parse(body);
-        if (data.error) {
-          return res.status(apiRes.statusCode || 500).json({ error: data.error.message || 'API hatasi', type: data.error.type });
-        }
-        res.json(data);
-      } catch(e) {
-        res.status(500).json({ error: 'API yaniti parse edilemedi', detail: body.substring(0, 300) });
+    res.json({
+      content: [{ type: 'text', text: response.choices[0].message.content }],
+      usage: { 
+        input_tokens: response.usage.prompt_tokens, 
+        output_tokens: response.usage.completion_tokens 
       }
     });
-  });
+  } catch(err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-  apiReq.on('error', function(e) {
-    res.status(500).json({ error: 'Anthropic API baglanti hatasi', detail: e.message });
-  });
+// Pipeline modulleri
+const TaskQueue = require("./pipeline/taskQueue");
+const AutoResponder = require("./pipeline/autoResponder");
+const PlanParser = require("./pipeline/parser");
+const activePipelines = new Map();
 
-  apiReq.setTimeout(60000, function() {
-    apiReq.destroy();
-    res.status(504).json({ error: 'API timeout (60s)' });
-  });
+// Pipeline endpoints
+app.post('/muzik/api/pipeline/create', function(req, res) {
+  const { sessionId, plan, format = 'markdown', policy = 'auto' } = req.body;
+  if (!sessionId || !plan) return res.status(400).json({ error: 'sessionId and plan required' });
+  const queue = new TaskQueue();
+  const responder = new AutoResponder(policy);
+  try {
+    const tasks = format === 'json' ? PlanParser.parseJSON(plan) : PlanParser.parseMarkdown(plan);
+    queue.addTasks(tasks);
+    activePipelines.set(sessionId, { queue, responder, createdAt: new Date() });
+    res.json({ sessionId, status: 'created', tasks: queue.getStatus() });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
-  apiReq.write(payload);
-  apiReq.end();
+app.get('/muzik/api/pipeline/status/:sessionId', function(req, res) {
+  const pipeline = activePipelines.get(req.params.sessionId);
+  if (!pipeline) return res.status(404).json({ error: 'Pipeline not found' });
+  res.json(pipeline.queue.getStatus());
+});
+
+app.post('/muzik/api/pipeline/next/:sessionId', async function(req, res) {
+  const pipeline = activePipelines.get(req.params.sessionId);
+  if (!pipeline) return res.status(404).json({ error: 'Pipeline not found' });
+  const task = pipeline.queue.getNext();
+  if (!task) return res.json({ status: 'completed', message: 'No more tasks' });
+  pipeline.queue.markRunning(task.id);
+  try {
+    let result;
+    if (task.executor === 'terminal' && task.command) {
+      result = await new Promise((resolve, reject) => {
+        exec(task.command, { timeout: 120000, cwd: '/root' }, (err, stdout, stderr) => {
+          if (err) reject(err);
+          else resolve({ stdout, stderr });
+        });
+      });
+      pipeline.queue.markCompleted(task.id, result);
+      res.json({ taskId: task.id, status: 'completed', executor: 'terminal', output: result });
+    } else if (task.executor === 'claude') {
+      res.json({ taskId: task.id, status: 'pending_claude', executor: 'claude', prompt: task.description, needsClaudeResponse: true });
+    } else {
+      throw new Error('Unknown executor: ' + task.executor);
+    }
+  } catch (error) {
+    pipeline.queue.markFailed(task.id, error.message);
+    res.status(500).json({ taskId: task.id, status: 'failed', error: error.message });
+  }
+});
+
+app.post('/muzik/api/pipeline/complete/:sessionId/:taskId', function(req, res) {
+  const pipeline = activePipelines.get(req.params.sessionId);
+  if (!pipeline) return res.status(404).json({ error: 'Pipeline not found' });
+  const { output } = req.body;
+  pipeline.queue.markCompleted(req.params.taskId, output);
+  res.json({ status: 'completed' });
+});
+
+app.delete('/muzik/api/pipeline/:sessionId', function(req, res) {
+  activePipelines.delete(req.params.sessionId);
+  res.json({ status: 'deleted' });
+});
+
+app.post('/muzik/chat', async function(req, res) {
+  try {
+    const messages = req.body.messages || [];
+    let system = req.body.system || '';
+    const model = req.body.model || 'gpt-4o';
+
+    if (!messages.length) return res.status(400).json({ error: 'messages gerekli' });
+    if (!openai) return res.status(500).json({ error: 'OPENAI_API_KEY ayarlanmamis' });
+
+    const response = await openai.chat.completions.create({
+      model: model,
+      messages: system ? [{ role: 'system', content: system }, ...messages] : messages,
+      max_tokens: req.body.max_tokens || 4096
+    });
+
+    res.json({
+      content: [{ type: 'text', text: response.choices[0].message.content }],
+      usage: { 
+        input_tokens: response.usage.prompt_tokens, 
+        output_tokens: response.usage.completion_tokens 
+      }
+    });
+  } catch(err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.listen(3002, function() {
@@ -675,5 +741,92 @@ app.post('/tymm/ingest/:filename', (req, res) => {
     if(err) return res.status(500).json({error:stderr});
     res.json({ok:true, output: stdout});
   });
+});
+
+// ── API Bakiye Endpoint ──
+const BILLING_TTL = 60 * 1000;
+const DG_PROJECT_TTL = 60 * 60 * 1000;
+const SVC_TIMEOUT = 5000;
+let _billingCache = { data: null, ts: 0 };
+let _dgProjectCache = { id: null, ts: 0 };
+
+async function _bFetchJson(url, opts) {
+  const r = await fetch(url, { ...opts, signal: AbortSignal.timeout(SVC_TIMEOUT) });
+  const txt = await r.text();
+  if (!r.ok) throw new Error(`HTTP ${r.status}: ${txt.slice(0, 160)}`);
+  try { return JSON.parse(txt); } catch { throw new Error(`bad json: ${txt.slice(0,160)}`); }
+}
+
+const _placeholder = (label, dashboard) => ({ status: 'unsupported', label, dashboard, note: 'Public balance API yok — dashboard\'dan kontrol' });
+
+async function _getDgProjectId(key) {
+  const now = Date.now();
+  if (_dgProjectCache.id && now - _dgProjectCache.ts < DG_PROJECT_TTL) return _dgProjectCache.id;
+  const d = await _bFetchJson('https://api.deepgram.com/v1/projects', { headers: { Authorization: `Token ${key}` } });
+  const id = d?.projects?.[0]?.project_id;
+  if (!id) throw new Error('no deepgram project found');
+  _dgProjectCache = { id, ts: now };
+  return id;
+}
+
+async function _svcElevenLabs() {
+  const k = process.env.ELEVENLABS_API_KEY;
+  if (!k) return { status: 'missing_key', label: 'ElevenLabs' };
+  const d = await _bFetchJson('https://api.elevenlabs.io/v1/user/subscription', { headers: { 'xi-api-key': k } });
+  return {
+    status: 'ok', label: 'ElevenLabs',
+    used: d.character_count, limit: d.character_limit,
+    remaining: (d.character_limit ?? 0) - (d.character_count ?? 0),
+    unit: 'karakter', tier: d.tier
+  };
+}
+
+async function _svcDeepgram() {
+  const k = process.env.DEEPGRAM_API_KEY;
+  if (!k) return { status: 'missing_key', label: 'Deepgram' };
+  const pid = await _getDgProjectId(k);
+  const d = await _bFetchJson(`https://api.deepgram.com/v1/projects/${pid}/balances`, { headers: { Authorization: `Token ${k}` } });
+  const b = d?.balances?.[0] || {};
+  return {
+    status: 'ok', label: 'Deepgram',
+    remaining: b.amount, limit: null, used: null,
+    unit: b.units || 'USD'
+  };
+}
+
+async function _svcHeyGen() {
+  const k = process.env.HEYGEN_API_KEY;
+  if (!k) return { status: 'missing_key', label: 'HeyGen' };
+  const d = await _bFetchJson('https://api.heygen.com/v2/user/remaining_quota', { headers: { 'X-Api-Key': k } });
+  const rem = d?.data?.remaining_quota;
+  return { status: 'ok', label: 'HeyGen', remaining: rem, limit: null, unit: 'saniye' };
+}
+
+app.get('/muzik/api-billing', async function(req, res) {
+  const now = Date.now();
+  if (!req.query.fresh && _billingCache.data && now - _billingCache.ts < BILLING_TTL) {
+    return res.json({ ..._billingCache.data, _cached: true, _cache_age_s: Math.round((now - _billingCache.ts)/1000) });
+  }
+
+  const tasks = {
+    anthropic: Promise.resolve(_placeholder('Anthropic', 'https://console.anthropic.com/settings/billing')),
+    openai:    Promise.resolve(_placeholder('OpenAI',    'https://platform.openai.com/usage')),
+    fal:       Promise.resolve(_placeholder('fal.ai',    'https://fal.ai/dashboard/billing')),
+    elevenlabs: _svcElevenLabs(),
+    deepgram:   _svcDeepgram(),
+    heygen:     _svcHeyGen(),
+  };
+
+  const names = Object.keys(tasks);
+  const settled = await Promise.allSettled(Object.values(tasks));
+  const services = {};
+  settled.forEach((r, i) => {
+    if (r.status === 'fulfilled') services[names[i]] = r.value;
+    else services[names[i]] = { status: 'error', label: names[i], note: String(r.reason?.message || r.reason).slice(0, 240) };
+  });
+
+  const payload = { updated: new Date().toISOString(), services };
+  _billingCache = { data: payload, ts: now };
+  res.json(payload);
 });
 

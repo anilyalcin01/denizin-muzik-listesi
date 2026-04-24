@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pipeline Executor</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #30363d;background:#161b22}
+.brand{font-size:14px;font-weight:600;color:#e6edf3}
+.status-pill{font-size:11px;padding:4px 12px;border-radius:999px;font-family:monospace;font-weight:600}
+.status-idle{background:rgba(139,148,158,0.15);color:#8b949e}
+.status-running{background:rgba(240,136,62,0.15);color:#f0883e;animation:pulse 1.5s infinite}
+.status-completed{background:rgba(63,185,80,0.15);color:#3fb950}
+.status-failed{background:rgba(248,81,73,0.15);color:#f85149}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
+
+.main{display:grid;grid-template-columns:400px 1fr;height:calc(100vh - 53px)}
+.left-panel{border-right:1px solid #30363d;display:flex;flex-direction:column;background:#161b22}
+.section{padding:16px;border-bottom:1px solid #30363d}
+.section-title{font-size:10px;color:#8b949e;margin-bottom:8px;font-family:monospace;letter-spacing:.08em;text-transform:uppercase}
+.plan-input{width:100%;height:180px;background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:10px;color:#e6edf3;font-family:monospace;font-size:11px;resize:vertical;line-height:1.6}
+.plan-input:focus{outline:none;border-color:#388bfd}
+.controls{display:flex;gap:8px;margin-top:8px}
+.select{flex:1;padding:7px 10px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;font-size:11px;font-family:monospace}
+.btn-start{flex:1;padding:8px 14px;background:#238636;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-start:hover{background:#2ea043}
+.btn-start:disabled{background:#21262d;color:#484f58;cursor:not-allowed}
+
+.progress-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.prog-item{text-align:center}
+.prog-num{font-size:24px;font-weight:700;margin-bottom:2px}
+.prog-label{font-size:9px;color:#8b949e;font-family:monospace;letter-spacing:.05em;text-transform:uppercase}
+.num-completed{color:#3fb950}
+.num-running{color:#f0883e}
+.num-pending{color:#8b949e}
+.num-failed{color:#f85149}
+
+.right-panel{display:flex;flex-direction:column;overflow:hidden}
+.task-header{padding:10px 16px;border-bottom:1px solid #30363d;background:#161b22;display:flex;justify-content:space-between;align-items:center}
+.task-title{font-size:10px;color:#8b949e;font-family:monospace;letter-spacing:.08em;text-transform:uppercase}
+.task-actions{display:flex;gap:6px}
+.btn-sm{padding:4px 10px;background:transparent;border:1px solid #30363d;border-radius:4px;color:#8b949e;font-size:10px;cursor:pointer;font-family:monospace}
+.btn-sm:hover{border-color:#8b949e;color:#e6edf3}
+
+.task-list{flex:1;overflow-y:auto;padding:12px}
+.task-card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px;margin-bottom:10px}
+.task-card.completed{border-left:3px solid #3fb950}
+.task-card.running{border-left:3px solid #f0883e;background:rgba(240,136,62,0.05)}
+.task-card.failed{border-left:3px solid #f85149}
+.task-card.pending{opacity:0.6}
+
+.task-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.task-id{font-size:9px;color:#484f58;font-family:monospace}
+.task-status{font-size:9px;padding:2px 8px;border-radius:999px;font-family:monospace;font-weight:600}
+.ts-completed{background:rgba(63,185,80,0.15);color:#3fb950}
+.ts-running{background:rgba(240,136,62,0.15);color:#f0883e}
+.ts-pending{background:rgba(139,148,158,0.15);color:#8b949e}
+.ts-failed{background:rgba(248,81,73,0.15);color:#f85149}
+
+.task-desc{font-size:12px;color:#e6edf3;margin-bottom:8px;line-height:1.5}
+.task-executor{display:inline-block;font-size:9px;padding:2px 6px;border-radius:3px;background:#0d1117;border:1px solid #30363d;color:#8b949e;font-family:monospace;margin-top:4px}
+
+.task-output{margin-top:10px;background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px;font-family:monospace;font-size:10px;color:#8b949e;max-height:200px;overflow-y:auto}
+.task-output pre{margin:0;white-space:pre-wrap;word-break:break-all}
+
+.empty{padding:40px 20px;text-align:center;color:#484f58;font-size:12px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">⚡ Pipeline Executor</div>
+  <div id="statusPill" class="status-pill status-idle">IDLE</div>
+</div>
+
+<div class="main">
+  <div class="left-panel">
+    <div class="section">
+      <div class="section-title">İş Planı (Markdown)</div>
+      <textarea id="planInput" class="plan-input" placeholder="## Sprint: Feature X
+- [ ] ChromaDB kontrolü
+- [ ] Test endpoint `npm test`
+- [ ] Claude'a sor: Elevo için yeni feature fikirleri
+- [ ] Deploy `pm2 restart all`"></textarea>
+      
+      <div class="controls">
+        <select id="policySelect" class="select">
+          <option value="auto">Auto (güvenli)</option>
+          <option value="ask">Her zaman sor</option>
+          <option value="manual">Manuel</option>
+        </select>
+        <button id="startBtn" class="btn-start">BAŞLAT</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">İlerleme</div>
+      <div class="progress-grid">
+        <div class="prog-item">
+          <div class="prog-num num-completed"><span id="completedCount">0</span></div>
+          <div class="prog-label">Tamamlandı</div>
+        </div>
+        <div class="prog-item">
+          <div class="prog-num num-running"><span id="runningCount">0</span></div>
+          <div class="prog-label">Çalışıyor</div>
+        </div>
+        <div class="prog-item">
+          <div class="prog-num num-pending"><span id="pendingCount">0</span></div>
+          <div class="prog-label">Bekliyor</div>
+        </div>
+        <div class="prog-item">
+          <div class="prog-num num-failed"><span id="failedCount">0</span></div>
+          <div class="prog-label">Başarısız</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="right-panel">
+    <div class="task-header">
+      <div class="task-title">Görevler</div>
+      <div class="task-actions">
+        <button id="pauseBtn" class="btn-sm" disabled>Duraklat</button>
+        <button id="clearBtn" class="btn-sm">Temizle</button>
+      </div>
+    </div>
+    <div class="task-list" id="taskList">
+      <div class="empty">İş planı girin ve başlatın...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = window.location.origin;
+let sessionId = null;
+let polling = null;
+
+const elements = {
+  planInput: document.getElementById('planInput'),
+  policySelect: document.getElementById('policySelect'),
+  startBtn: document.getElementById('startBtn'),
+  pauseBtn: document.getElementById('pauseBtn'),
+  clearBtn: document.getElementById('clearBtn'),
+  taskList: document.getElementById('taskList'),
+  statusPill: document.getElementById('statusPill'),
+  completedCount: document.getElementById('completedCount'),
+  runningCount: document.getElementById('runningCount'),
+  pendingCount: document.getElementById('pendingCount'),
+  failedCount: document.getElementById('failedCount')
+};
+
+elements.startBtn.addEventListener('click', startPipeline);
+elements.clearBtn.addEventListener('click', clearPipeline);
+
+async function startPipeline() {
+  const plan = elements.planInput.value.trim();
+  if (!plan) return alert('İş planı boş olamaz!');
+
+  sessionId = 'pipe_' + Date.now();
+  
+  try {
+    const res = await fetch(`${API}/muzik/api/pipeline/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId,
+        plan,
+        format: 'markdown',
+        policy: elements.policySelect.value
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    elements.startBtn.disabled = true;
+    elements.pauseBtn.disabled = false;
+    updateStatus('running');
+    
+    renderTasks(data.tasks.tasks);
+    startPolling();
+    executeNext();
+
+  } catch (err) {
+    alert('Pipeline oluşturulamadı: ' + err.message);
+  }
+}
+
+async function executeNext() {
+  if (!sessionId) return;
+
+  try {
+    const res = await fetch(`${API}/muzik/api/pipeline/next/${sessionId}`, {
+      method: 'POST'
+    });
+
+    const data = await res.json();
+    console.log('executeNext response:', data);
+    
+    if (data.status === 'completed' && data.message === 'No more tasks') {
+      console.log('Pipeline tamamlandı!');
+      stopPolling();
+      updateStatus('completed');
+      elements.startBtn.disabled = false;
+      elements.pauseBtn.disabled = true;
+      return;
+    }
+
+    if (data.executor === 'terminal' && data.status === 'completed') {
+      console.log('Terminal görevi tamamlandı:', data.taskId);
+      // Sonraki göreve geç
+      setTimeout(() => executeNext(), 500);
+      return;
+    }
+
+    if (data.needsClaudeResponse) {
+      console.log('Claude görevi başlatılıyor:', data.taskId);
+      await handleClaudeTask(data);
+      // Claude tamamlandıktan sonra devam et
+      setTimeout(() => executeNext(), 500);
+      return;
+    }
+
+  } catch (err) {
+    console.error('Görev hatası:', err);
+    updateStatus('failed');
+    stopPolling();
+  }
+}
+}
+
+async function handleClaudeTask(task) {
+  try {
+    const res = await fetch(`${API}/muzik/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        messages: [{ role: "user", content: task.prompt }],
+        max_tokens: 2000
+      })
+    });
+
+    const data = await res.json();
+    const output = data.content?.[0]?.text || "Claude yanıt veremedi";
+
+    await fetch(`${API}/muzik/api/pipeline/complete/${sessionId}/${task.taskId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ output })
+    });
+
+  } catch (err) {
+    console.error("Claude hatası:", err);
+  }
+}
+
+function startPolling() {
+  polling = setInterval(async () => {
+    if (!sessionId) return;
+
+    try {
+      const res = await fetch(`${API}/muzik/api/pipeline/status/${sessionId}`);
+      const data = await res.json();
+      
+      updateProgress(data);
+      renderTasks(data.tasks);
+
+    } catch (err) {
+      console.error('Polling hatası:', err);
+    }
+  }, 2000);
+}
+
+function stopPolling() {
+  if (polling) {
+    clearInterval(polling);
+    polling = null;
+  }
+}
+
+function updateProgress(status) {
+  elements.completedCount.textContent = status.completed;
+  elements.runningCount.textContent = status.running;
+  elements.pendingCount.textContent = status.pending;
+  elements.failedCount.textContent = status.failed;
+}
+
+function updateStatus(status) {
+  const classes = {
+    idle: 'status-idle',
+    running: 'status-running',
+    completed: 'status-completed',
+    failed: 'status-failed'
+  };
+  
+  elements.statusPill.className = 'status-pill ' + classes[status];
+  elements.statusPill.textContent = status.toUpperCase();
+}
+
+function renderTasks(tasks) {
+  if (!tasks || !tasks.length) {
+    elements.taskList.innerHTML = '<div class="empty">Görev yok</div>';
+    return;
+  }
+
+  elements.taskList.innerHTML = tasks.map(task => {
+    const statusClass = {
+      completed: 'ts-completed',
+      running: 'ts-running',
+      pending: 'ts-pending',
+      failed: 'ts-failed'
+    }[task.status] || 'ts-pending';
+
+    let output = '';
+    if (task.output) {
+      const text = typeof task.output === 'string' 
+        ? task.output 
+        : JSON.stringify(task.output, null, 2);
+      output = `<div class="task-output"><pre>${text.slice(0, 500)}</pre></div>`;
+    }
+
+    if (task.error) {
+      output = `<div class="task-output" style="color:#f85149;"><pre>ERROR: ${task.error}</pre></div>`;
+    }
+
+    return `
+      <div class="task-card ${task.status}">
+        <div class="task-meta">
+          <div class="task-id">#${task.id.split('-')[0]}</div>
+          <div class="task-status ${statusClass}">${task.status}</div>
+        </div>
+        <div class="task-desc">${task.description}</div>
+        <div class="task-executor">${task.executor}</div>
+        ${output}
+      </div>
+    `;
+  }).join('');
+}
+
+function clearPipeline() {
+  if (sessionId) {
+    fetch(`${API}/muzik/api/pipeline/${sessionId}`, { method: 'DELETE' });
+  }
+  
+  stopPolling();
+  sessionId = null;
+  elements.taskList.innerHTML = '<div class="empty">İş planı girin ve başlatın...</div>';
+  elements.startBtn.disabled = false;
+  elements.pauseBtn.disabled = true;
+  updateStatus('idle');
+  updateProgress({ completed: 0, running: 0, pending: 0, failed: 0 });
+}
+</script>
+
+</body>
+</html>
