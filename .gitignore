@@ -1,4 +1,14 @@
-node_modules/
+.env
+.env.*
+!.env.example
+*.backup
+*.backup-*
+*.bak
+*.bak.*
+.DS_Store
+*.log
+.cache
+/tmp/
 *.mp3
 *.wav
 *.ogg
@@ -7,7 +17,5 @@ node_modules/
 *.mp4
 *.webm
 *.mkv
-/tmp/
-*.bak
-.cache
+node_modules/
 public/sohbet-yedekleri/
